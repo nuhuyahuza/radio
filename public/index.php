@@ -96,6 +96,26 @@ switch ($path) {
         $bookingController->showBookingSuccess();
         break;
         
+    case '/manager/slots':
+        $slotController = new \App\Controllers\SlotController();
+        $slotController->showSlotsManagement();
+        break;
+        
+    case '/manager/slots/create':
+        $slotController = new \App\Controllers\SlotController();
+        $slotController->showCreateSlot();
+        break;
+        
+    case (preg_match('/^\/manager\/slots\/edit\/(\d+)$/', $path, $matches) ? true : false):
+        $slotController = new \App\Controllers\SlotController();
+        $slotController->showEditSlot($matches[1]);
+        break;
+        
+    case '/manager/slots/data':
+        $slotController = new \App\Controllers\SlotController();
+        $slotController->getSlotsData();
+        break;
+        
     // Handle POST requests
     default:
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -124,6 +144,26 @@ switch ($path) {
                 case (preg_match('/^\/booking-confirm\/(\d+)$/', $path, $matches) ? true : false):
                     $bookingController = new \App\Controllers\BookingController();
                     $bookingController->confirmBooking($matches[1]);
+                    break;
+                    
+                case '/manager/slots/create':
+                    $slotController = new \App\Controllers\SlotController();
+                    $slotController->createSlot();
+                    break;
+                    
+                case (preg_match('/^\/manager\/slots\/edit\/(\d+)$/', $path, $matches) ? true : false):
+                    $slotController = new \App\Controllers\SlotController();
+                    $slotController->updateSlot($matches[1]);
+                    break;
+                    
+                case (preg_match('/^\/manager\/slots\/delete\/(\d+)$/', $path, $matches) ? true : false):
+                    $slotController = new \App\Controllers\SlotController();
+                    $slotController->deleteSlot($matches[1]);
+                    break;
+                    
+                case (preg_match('/^\/manager\/slots\/cancel\/(\d+)$/', $path, $matches) ? true : false):
+                    $slotController = new \App\Controllers\SlotController();
+                    $slotController->cancelSlot($matches[1]);
                     break;
                     
                 default:
