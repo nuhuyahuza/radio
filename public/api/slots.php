@@ -1,103 +1,88 @@
 <?php
 /**
  * Slots API - Returns available slots in JSON format
- * This is a placeholder implementation for Todo 04
+ * Uses actual database queries to fetch slot data
  */
+
+// Load Composer autoloader
+require_once __DIR__ . '/../../vendor/autoload.php';
+
+use App\Models\Slot;
+use App\Models\Booking;
 
 header('Content-Type: application/json');
 
-// Sample data - will be replaced with actual database queries in later todos
-$slots = [
-    [
-        'id' => 1,
-        'title' => 'Morning Drive (6:00 AM - 9:00 AM)',
-        'start' => date('Y-m-d', strtotime('+1 day')) . 'T06:00:00',
-        'end' => date('Y-m-d', strtotime('+1 day')) . 'T09:00:00',
-        'status' => 'available',
-        'price' => 150.00,
-        'color' => '#28a745'
-    ],
-    [
-        'id' => 2,
-        'title' => 'Midday (12:00 PM - 2:00 PM)',
-        'start' => date('Y-m-d', strtotime('+1 day')) . 'T12:00:00',
-        'end' => date('Y-m-d', strtotime('+1 day')) . 'T14:00:00',
-        'status' => 'available',
-        'price' => 100.00,
-        'color' => '#28a745'
-    ],
-    [
-        'id' => 3,
-        'title' => 'Evening Rush (5:00 PM - 7:00 PM)',
-        'start' => date('Y-m-d', strtotime('+1 day')) . 'T17:00:00',
-        'end' => date('Y-m-d', strtotime('+1 day')) . 'T19:00:00',
-        'status' => 'available',
-        'price' => 200.00,
-        'color' => '#28a745'
-    ],
-    [
-        'id' => 4,
-        'title' => 'Morning Drive (6:00 AM - 9:00 AM)',
-        'start' => date('Y-m-d', strtotime('+2 days')) . 'T06:00:00',
-        'end' => date('Y-m-d', strtotime('+2 days')) . 'T09:00:00',
-        'status' => 'booked',
-        'price' => 150.00,
-        'color' => '#dc3545'
-    ],
-    [
-        'id' => 5,
-        'title' => 'Midday (12:00 PM - 2:00 PM)',
-        'start' => date('Y-m-d', strtotime('+2 days')) . 'T12:00:00',
-        'end' => date('Y-m-d', strtotime('+2 days')) . 'T14:00:00',
-        'status' => 'available',
-        'price' => 100.00,
-        'color' => '#28a745'
-    ],
-    [
-        'id' => 6,
-        'title' => 'Evening Rush (5:00 PM - 7:00 PM)',
-        'start' => date('Y-m-d', strtotime('+2 days')) . 'T17:00:00',
-        'end' => date('Y-m-d', strtotime('+2 days')) . 'T19:00:00',
-        'status' => 'available',
-        'price' => 200.00,
-        'color' => '#28a745'
-    ]
-];
-
-// Add more sample data for the next week
-for ($i = 3; $i <= 7; $i++) {
-    $date = date('Y-m-d', strtotime("+$i days"));
+try {
+    $slotModel = new Slot();
+    $bookingModel = new Booking();
     
-    $slots[] = [
-        'id' => $i * 3 + 1,
-        'title' => 'Morning Drive (6:00 AM - 9:00 AM)',
-        'start' => $date . 'T06:00:00',
-        'end' => $date . 'T09:00:00',
-        'status' => 'available',
-        'price' => 150.00,
-        'color' => '#28a745'
-    ];
+    // Get date range (next 30 days)
+    $startDate = date('Y-m-d');
+    $endDate = date('Y-m-d', strtotime('+30 days'));
     
-    $slots[] = [
-        'id' => $i * 3 + 2,
-        'title' => 'Midday (12:00 PM - 2:00 PM)',
-        'start' => $date . 'T12:00:00',
-        'end' => $date . 'T14:00:00',
-        'status' => 'available',
-        'price' => 100.00,
-        'color' => '#28a745'
-    ];
+    // Fetch slots from database
+    $slots = $slotModel->findByDateRange($startDate, $endDate);
     
-    $slots[] = [
-        'id' => $i * 3 + 3,
-        'title' => 'Evening Rush (5:00 PM - 7:00 PM)',
-        'start' => $date . 'T17:00:00',
-        'end' => $date . 'T19:00:00',
-        'status' => 'available',
-        'price' => 200.00,
-        'color' => '#28a745'
-    ];
+    // Transform slots for FullCalendar
+    $calendarSlots = [];
+    
+    foreach ($slots as $slot) {
+        // Check if slot is booked
+        $isBooked = $bookingModel->isSlotBooked($slot['id']);
+        $status = $isBooked ? 'booked' : $slot['status'];
+        
+        // Determine color based on status
+        $color = '#28a745'; // Green for available
+        if ($status === 'booked') {
+            $color = '#dc3545'; // Red for booked
+        } elseif ($status === 'cancelled') {
+            $color = '#6c757d'; // Gray for cancelled
+        } elseif ($status === 'maintenance') {
+            $color = '#ffc107'; // Yellow for maintenance
+        }
+        
+        // Create time slot title
+        $startTime = date('g:i A', strtotime($slot['start_time']));
+        $endTime = date('g:i A', strtotime($slot['end_time']));
+        $title = $startTime . ' - ' . $endTime;
+        
+        // Add price to title if available
+        if ($slot['price'] > 0) {
+            $title .= ' ($' . number_format($slot['price'], 0) . ')';
+        }
+        
+        $calendarSlots[] = [
+            'id' => $slot['id'],
+            'title' => $title,
+            'start' => $slot['date'] . 'T' . $slot['start_time'],
+            'end' => $slot['date'] . 'T' . $slot['end_time'],
+            'status' => $status,
+            'price' => floatval($slot['price']),
+            'color' => $color,
+            'description' => $slot['description'] ?? '',
+            'extendedProps' => [
+                'status' => $status,
+                'price' => floatval($slot['price']),
+                'slotId' => $slot['id'],
+                'date' => $slot['date'],
+                'startTime' => $slot['start_time'],
+                'endTime' => $slot['end_time']
+            ]
+        ];
+    }
+    
+    // Return JSON response
+    echo json_encode($calendarSlots);
+    
+} catch (Exception $e) {
+    // Log error (in production, use proper logging)
+    error_log("Slots API Error: " . $e->getMessage());
+    
+    // Return error response
+    http_response_code(500);
+    echo json_encode([
+        'error' => 'Failed to fetch slots',
+        'message' => 'An error occurred while retrieving slot data'
+    ]);
 }
-
-echo json_encode($slots);
 ?>
