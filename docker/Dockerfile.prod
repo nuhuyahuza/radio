@@ -1,0 +1,54 @@
+## Multi-stage production Dockerfile
+
+# Builder stage: install deps with composer (no dev)
+FROM php:7.4-fpm AS builder
+
+RUN apt-get update && apt-get install -y \
+    git unzip libzip-dev libpng-dev libonig-dev libxml2-dev libicu-dev \
+    && docker-php-ext-configure intl \
+    && docker-php-ext-install pdo_mysql zip intl mbstring xml gd opcache \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+# Copy application files
+COPY composer.json composer.lock* ./
+
+# Install PHP dependencies (no-dev) for production
+RUN composer install --no-dev --prefer-dist --no-interaction --no-ansi --no-progress
+
+# Final stage: runtime image
+FROM php:7.4-fpm AS runtime
+
+RUN apt-get update && apt-get install -y \
+    libzip-dev libpng-dev libonig-dev libxml2-dev libicu-dev \
+    && docker-php-ext-configure intl \
+    && docker-php-ext-install pdo_mysql zip intl mbstring xml gd opcache \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /var/www/html
+
+# Copy app source
+COPY . /var/www/html
+
+# Copy vendor from builder
+COPY --from=builder /var/www/html/vendor /var/www/html/vendor
+
+# PHP configuration
+COPY docker/php.ini /usr/local/etc/php/php.ini
+
+# Opcache recommended defaults
+RUN { \
+  echo 'opcache.enable=1'; \
+  echo 'opcache.memory_consumption=128'; \
+  echo 'opcache.max_accelerated_files=4000'; \
+  echo 'opcache.validate_timestamps=0'; \
+  echo 'opcache.enable_cli=1'; \
+} > /usr/local/etc/php/conf.d/opcache.ini
+
+CMD ["php-fpm"]
+
+

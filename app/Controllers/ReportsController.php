@@ -7,6 +7,9 @@ use App\Models\Slot;
 use App\Models\User;
 use App\Utils\Session;
 use App\Database\Database;
+use Dompdf\Dompdf;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 /**
  * Reports Controller
@@ -118,17 +121,36 @@ class ReportsController
         $type = $_GET['type'] ?? 'bookings';
         $startDate = $_GET['start_date'] ?? date('Y-m-01');
         $endDate = $_GET['end_date'] ?? date('Y-m-t');
+        $format = strtolower($_GET['format'] ?? 'csv');
 
         try {
             switch ($type) {
                 case 'bookings':
-                    $this->exportBookingsCSV($startDate, $endDate);
+                    if ($format === 'pdf') {
+                        $this->exportBookingsPDF($startDate, $endDate);
+                    } elseif ($format === 'excel' || $format === 'xlsx') {
+                        $this->exportBookingsExcel($startDate, $endDate);
+                    } else {
+                        $this->exportBookingsCSV($startDate, $endDate);
+                    }
                     break;
                 case 'revenue':
-                    $this->exportRevenueCSV($startDate, $endDate);
+                    if ($format === 'pdf') {
+                        $this->exportRevenuePDF($startDate, $endDate);
+                    } elseif ($format === 'excel' || $format === 'xlsx') {
+                        $this->exportRevenueExcel($startDate, $endDate);
+                    } else {
+                        $this->exportRevenueCSV($startDate, $endDate);
+                    }
                     break;
                 case 'users':
-                    $this->exportUsersCSV();
+                    if ($format === 'pdf') {
+                        $this->exportUsersPDF();
+                    } elseif ($format === 'excel' || $format === 'xlsx') {
+                        $this->exportUsersExcel();
+                    } else {
+                        $this->exportUsersCSV();
+                    }
                     break;
                 default:
                     throw new \Exception('Invalid export type');
@@ -138,6 +160,202 @@ class ReportsController
             header('Location: /admin/reports');
             exit;
         }
+    }
+
+    /**
+     * Export helpers: PDF (Dompdf)
+     */
+    private function exportBookingsPDF($startDate, $endDate)
+    {
+        $sql = "
+            SELECT b.id, b.status, b.total_amount, b.created_at,
+                   u.name as advertiser_name, u.email as advertiser_email,
+                   s.date, s.start_time, s.end_time
+            FROM bookings b
+            JOIN users u ON b.advertiser_id = u.id
+            JOIN slots s ON b.slot_id = s.id
+            WHERE DATE(b.created_at) BETWEEN ? AND ?
+            ORDER BY b.created_at DESC
+        ";
+        $rows = $this->db->fetchAll($sql, [$startDate, $endDate]);
+
+        $html = '<h2>Bookings Report</h2>';
+        $html .= '<p>Period: ' . htmlspecialchars($startDate) . ' to ' . htmlspecialchars($endDate) . '</p>';
+        $html .= '<table width="100%" border="1" cellspacing="0" cellpadding="4">'
+            . '<thead><tr>'
+            . '<th>ID</th><th>Advertiser</th><th>Email</th><th>Date</th><th>Start</th><th>End</th><th>Status</th><th>Amount</th><th>Created</th>'
+            . '</tr></thead><tbody>';
+        foreach ($rows as $r) {
+            $html .= '<tr>'
+                . '<td>' . (int)$r['id'] . '</td>'
+                . '<td>' . htmlspecialchars($r['advertiser_name']) . '</td>'
+                . '<td>' . htmlspecialchars($r['advertiser_email']) . '</td>'
+                . '<td>' . htmlspecialchars($r['date']) . '</td>'
+                . '<td>' . htmlspecialchars($r['start_time']) . '</td>'
+                . '<td>' . htmlspecialchars($r['end_time']) . '</td>'
+                . '<td>' . htmlspecialchars(ucfirst($r['status'])) . '</td>'
+                . '<td>' . number_format((float)$r['total_amount'], 2) . '</td>'
+                . '<td>' . htmlspecialchars($r['created_at']) . '</td>'
+                . '</tr>';
+        }
+        $html .= '</tbody></table>';
+
+        $this->renderPdf($html, "bookings_{$startDate}_to_{$endDate}.pdf");
+    }
+
+    private function exportRevenuePDF($startDate, $endDate)
+    {
+        $sql = "
+            SELECT DATE(created_at) as date, COUNT(*) as bookings, SUM(total_amount) as revenue
+            FROM bookings
+            WHERE status = 'approved' AND DATE(created_at) BETWEEN ? AND ?
+            GROUP BY DATE(created_at)
+            ORDER BY date
+        ";
+        $rows = $this->db->fetchAll($sql, [$startDate, $endDate]);
+
+        $html = '<h2>Revenue Report</h2>';
+        $html .= '<p>Period: ' . htmlspecialchars($startDate) . ' to ' . htmlspecialchars($endDate) . '</p>';
+        $html .= '<table width="100%" border="1" cellspacing="0" cellpadding="4">'
+            . '<thead><tr><th>Date</th><th>Bookings</th><th>Revenue</th></tr></thead><tbody>';
+        foreach ($rows as $r) {
+            $html .= '<tr>'
+                . '<td>' . htmlspecialchars($r['date']) . '</td>'
+                . '<td>' . (int)$r['bookings'] . '</td>'
+                . '<td>' . number_format((float)$r['revenue'], 2) . '</td>'
+                . '</tr>';
+        }
+        $html .= '</tbody></table>';
+
+        $this->renderPdf($html, "revenue_{$startDate}_to_{$endDate}.pdf");
+    }
+
+    private function exportUsersPDF()
+    {
+        $sql = "SELECT id, name, email, role, phone, company, is_active, created_at, last_login_at FROM users ORDER BY created_at DESC";
+        $rows = $this->db->fetchAll($sql);
+
+        $html = '<h2>Users Report</h2>';
+        $html .= '<table width="100%" border="1" cellspacing="0" cellpadding="4">'
+            . '<thead><tr>'
+            . '<th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Phone</th><th>Company</th><th>Status</th><th>Created</th><th>Last Login</th>'
+            . '</tr></thead><tbody>';
+        foreach ($rows as $r) {
+            $html .= '<tr>'
+                . '<td>' . (int)$r['id'] . '</td>'
+                . '<td>' . htmlspecialchars($r['name']) . '</td>'
+                . '<td>' . htmlspecialchars($r['email']) . '</td>'
+                . '<td>' . htmlspecialchars(ucfirst($r['role'])) . '</td>'
+                . '<td>' . htmlspecialchars($r['phone'] ?? '') . '</td>'
+                . '<td>' . htmlspecialchars($r['company'] ?? '') . '</td>'
+                . '<td>' . (($r['is_active'] ? 'Active' : 'Inactive')) . '</td>'
+                . '<td>' . htmlspecialchars($r['created_at']) . '</td>'
+                . '<td>' . htmlspecialchars($r['last_login_at'] ?? '') . '</td>'
+                . '</tr>';
+        }
+        $html .= '</tbody></table>';
+
+        $this->renderPdf($html, 'users_' . date('Y-m-d') . '.pdf');
+    }
+
+    private function renderPdf(string $html, string $filename)
+    {
+        $dompdf = new Dompdf();
+        $options = $dompdf->getOptions();
+        $options->set('isRemoteEnabled', true);
+        $dompdf->setOptions($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->render();
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        echo $dompdf->output();
+        exit;
+    }
+
+    /**
+     * Export helpers: Excel (PhpSpreadsheet)
+     */
+    private function exportBookingsExcel($startDate, $endDate)
+    {
+        $sql = "
+            SELECT b.id, b.status, b.total_amount, b.created_at,
+                   u.name as advertiser_name, u.email as advertiser_email,
+                   s.date, s.start_time, s.end_time
+            FROM bookings b
+            JOIN users u ON b.advertiser_id = u.id
+            JOIN slots s ON b.slot_id = s.id
+            WHERE DATE(b.created_at) BETWEEN ? AND ?
+            ORDER BY b.created_at DESC
+        ";
+        $rows = $this->db->fetchAll($sql, [$startDate, $endDate]);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->fromArray([
+            ['Booking ID','Advertiser Name','Advertiser Email','Date','Start Time','End Time','Status','Amount','Created At']
+        ], null, 'A1');
+        $rowIdx = 2;
+        foreach ($rows as $r) {
+            $sheet->fromArray([
+                $r['id'], $r['advertiser_name'], $r['advertiser_email'], $r['date'], $r['start_time'], $r['end_time'], ucfirst($r['status']), (float)$r['total_amount'], $r['created_at']
+            ], null, 'A' . $rowIdx++);
+        }
+        $this->streamSpreadsheet($spreadsheet, "bookings_{$startDate}_to_{$endDate}.xlsx");
+    }
+
+    private function exportRevenueExcel($startDate, $endDate)
+    {
+        $sql = "
+            SELECT DATE(created_at) as date, COUNT(*) as bookings, SUM(total_amount) as revenue
+            FROM bookings
+            WHERE status = 'approved' AND DATE(created_at) BETWEEN ? AND ?
+            GROUP BY DATE(created_at)
+            ORDER BY date
+        ";
+        $rows = $this->db->fetchAll($sql, [$startDate, $endDate]);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->fromArray([
+            ['Date','Bookings','Revenue']
+        ], null, 'A1');
+        $rowIdx = 2;
+        foreach ($rows as $r) {
+            $sheet->fromArray([
+                $r['date'], (int)$r['bookings'], (float)$r['revenue']
+            ], null, 'A' . $rowIdx++);
+        }
+        $this->streamSpreadsheet($spreadsheet, "revenue_{$startDate}_to_{$endDate}.xlsx");
+    }
+
+    private function exportUsersExcel()
+    {
+        $sql = "SELECT id, name, email, role, phone, company, is_active, created_at, last_login_at FROM users ORDER BY created_at DESC";
+        $rows = $this->db->fetchAll($sql);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->fromArray([
+            ['ID','Name','Email','Role','Phone','Company','Active','Created At','Last Login']
+        ], null, 'A1');
+        $rowIdx = 2;
+        foreach ($rows as $r) {
+            $sheet->fromArray([
+                (int)$r['id'], $r['name'], $r['email'], $r['role'], $r['phone'], $r['company'], $r['is_active'] ? 'Yes' : 'No', $r['created_at'], $r['last_login_at']
+            ], null, 'A' . $rowIdx++);
+        }
+        $this->streamSpreadsheet($spreadsheet, 'users_' . date('Y-m-d') . '.xlsx');
+    }
+
+    private function streamSpreadsheet(Spreadsheet $spreadsheet, string $filename)
+    {
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $writer = new Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
     }
 
     /**
@@ -418,4 +636,3 @@ class ReportsController
         exit;
     }
 }
-

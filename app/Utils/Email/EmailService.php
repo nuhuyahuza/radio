@@ -4,7 +4,7 @@ namespace App\Utils\Email;
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception;
+use PHPMailer\PHPMailer\Exception as MailerException;
 
 /**
  * Email Service
@@ -45,7 +45,7 @@ class EmailService
             $this->mailer->isHTML(true);
             $this->mailer->CharSet = 'UTF-8';
 
-        } catch (Exception $e) {
+        } catch (MailerException $e) {
             error_log("Email configuration error: " . $e->getMessage());
         }
     }
@@ -66,7 +66,7 @@ class EmailService
             $this->mailer->send();
             return true;
 
-        } catch (Exception $e) {
+        } catch (MailerException $e) {
             error_log("Booking confirmation email error: " . $e->getMessage());
             return false;
         }
@@ -88,7 +88,7 @@ class EmailService
             $this->mailer->send();
             return true;
 
-        } catch (Exception $e) {
+        } catch (MailerException $e) {
             error_log("Booking approval email error: " . $e->getMessage());
             return false;
         }
@@ -110,7 +110,7 @@ class EmailService
             $this->mailer->send();
             return true;
 
-        } catch (Exception $e) {
+        } catch (MailerException $e) {
             error_log("Booking rejection email error: " . $e->getMessage());
             return false;
         }
@@ -132,7 +132,7 @@ class EmailService
             $this->mailer->send();
             return true;
 
-        } catch (Exception $e) {
+        } catch (MailerException $e) {
             error_log("Account creation email error: " . $e->getMessage());
             return false;
         }
@@ -141,20 +141,20 @@ class EmailService
     /**
      * Send password reset email
      */
-    public function sendPasswordReset($toEmail, $toName, $resetToken)
+    public function sendPasswordReset($toEmail, $toName, $resetLink)
     {
         try {
             $this->mailer->clearAddresses();
             $this->mailer->addAddress($toEmail, $toName);
             $this->mailer->Subject = 'Password Reset - Zaa Radio';
 
-            $template = $this->getPasswordResetTemplate($toName, $resetToken);
+            $template = $this->getPasswordResetTemplate($toName, $resetLink);
             $this->mailer->Body = $template;
 
             $this->mailer->send();
             return true;
 
-        } catch (Exception $e) {
+        } catch (MailerException $e) {
             error_log("Password reset email error: " . $e->getMessage());
             return false;
         }
@@ -176,8 +176,34 @@ class EmailService
             $this->mailer->send();
             return true;
 
-        } catch (Exception $e) {
+        } catch (MailerException $e) {
             error_log("Slot reminder email error: " . $e->getMessage());
+            return false;
+        }
+
+    }
+
+    /**
+     * Send payment reminder email
+     */
+    public function sendPaymentReminder($toEmail, $toName, $bookingData)
+    {
+        try {
+            $this->mailer->clearAddresses();
+            $this->mailer->addAddress($toEmail, $toName);
+            $this->mailer->Subject = 'Payment Reminder - Zaa Radio';
+
+            $amount = '$' . number_format($bookingData['total_amount'], 2);
+            $date = date('F j, Y', strtotime($bookingData['date']));
+            $template = "<p>Dear " . htmlspecialchars($toName) . ",</p>"
+                      . "<p>This is a friendly reminder to complete your payment of <strong>{$amount}</strong> for the booking scheduled on <strong>{$date}</strong>.</p>"
+                      . "<p>Booking ID: #" . (int)$bookingData['id'] . "</p>";
+            $this->mailer->Body = $template;
+
+            $this->mailer->send();
+            return true;
+        } catch (MailerException $e) {
+            error_log("Payment reminder email error: " . $e->getMessage());
             return false;
         }
     }
@@ -422,9 +448,9 @@ class EmailService
     /**
      * Get password reset email template
      */
-    private function getPasswordResetTemplate($name, $resetToken)
+    private function getPasswordResetTemplate($name, $resetLink)
     {
-        $resetLink = "http://localhost:8080/reset-password?token={$resetToken}";
+        // $resetLink is a full URL
 
         return "
         <!DOCTYPE html>

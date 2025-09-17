@@ -56,9 +56,8 @@ docker-compose exec app php seeds/seed.php
 ```
 
 7. Access the application:
-- **Application**: http://localhost:8080
-- **phpMyAdmin**: http://localhost:8081
-- **Redis Commander**: http://localhost:8082
+- Web (nginx): http://localhost
+- phpMyAdmin: http://localhost:8080
 
 ### Default Credentials
 
@@ -86,7 +85,7 @@ radio/
 └── docker-compose.yml     # Docker services
 ```
 
-## API Endpoints
+## API/Routes (selected)
 
 ### Public
 - `GET /` - Landing page
@@ -95,8 +94,9 @@ radio/
 
 ### Admin
 - `GET /admin` - Admin dashboard
-- `GET /admin/users` - User management
+- `GET /admin/users*` - User management (list/create/edit/toggle/delete)
 - `GET /admin/reports` - Reports & analytics
+- `GET /admin/reports/export?type=bookings|revenue|users&format=csv|pdf|excel`
 
 ### Station Manager
 - `GET /manager` - Manager dashboard
@@ -139,14 +139,23 @@ This project follows PSR-12 PHP coding standards.
 
 ## Production Deployment
 
-1. Use production Docker Compose file:
+1) Build and run
 ```bash
-docker-compose -f docker-compose.prod.yml up -d
+docker-compose -f docker-compose.prod.yml up -d --build
+docker-compose -f docker-compose.prod.yml exec app php migrate.php
 ```
+2) SSL: place certs in `docker/nginx/ssl/` or terminate upstream
+3) Worker: enabled via `worker` service (Redis queue)
+4) CI/CD: `.github/workflows/deploy.yml` builds image and can push when configured
 
-2. Set up SSL certificates
-3. Configure reverse proxy (nginx)
-4. Set up monitoring and logging
+## Staging
+
+`docker-compose.staging.yml` exposes web on 8081 and MySQL on 3307.
+
+## Exports & Queue
+
+- Exports: CSV/PDF/Excel via reports export endpoint
+- Queue: set `QUEUE_CONNECTION=redis` to enqueue emails; worker processes `zaa_radio_queue`
 
 ## Support
 

@@ -17,9 +17,20 @@ use App\Utils\Session;
                         <i class="fas fa-download"></i> Export
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="/admin/reports/export?type=bookings">Export Bookings</a></li>
-                        <li><a class="dropdown-item" href="/admin/reports/export?type=revenue">Export Revenue</a></li>
-                        <li><a class="dropdown-item" href="/admin/reports/export?type=users">Export Users</a></li>
+                        <li><h6 class="dropdown-header">Bookings</h6></li>
+                        <li><a class="dropdown-item" href="/admin/reports/export?type=bookings&format=csv">CSV</a></li>
+                        <li><a class="dropdown-item" href="/admin/reports/export?type=bookings&format=pdf">PDF</a></li>
+                        <li><a class="dropdown-item" href="/admin/reports/export?type=bookings&format=excel">Excel</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><h6 class="dropdown-header">Revenue</h6></li>
+                        <li><a class="dropdown-item" href="/admin/reports/export?type=revenue&format=csv">CSV</a></li>
+                        <li><a class="dropdown-item" href="/admin/reports/export?type=revenue&format=pdf">PDF</a></li>
+                        <li><a class="dropdown-item" href="/admin/reports/export?type=revenue&format=excel">Excel</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><h6 class="dropdown-header">Users</h6></li>
+                        <li><a class="dropdown-item" href="/admin/reports/export?type=users&format=csv">CSV</a></li>
+                        <li><a class="dropdown-item" href="/admin/reports/export?type=users&format=pdf">PDF</a></li>
+                        <li><a class="dropdown-item" href="/admin/reports/export?type=users&format=excel">Excel</a></li>
                     </ul>
                 </div>
             </div>
