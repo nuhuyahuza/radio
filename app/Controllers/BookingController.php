@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Slot;
 use App\Models\Booking;
 use App\Utils\Session;
+use App\Utils\NotificationService;
 use App\Database\Database;
 
 /**
@@ -17,6 +18,7 @@ class BookingController
     private $userModel;
     private $slotModel;
     private $bookingModel;
+    private $notificationService;
     private $db;
 
     public function __construct()
@@ -24,6 +26,7 @@ class BookingController
         $this->userModel = new User();
         $this->slotModel = new Slot();
         $this->bookingModel = new Booking();
+        $this->notificationService = new NotificationService();
         $this->db = Database::getInstance();
     }
 
@@ -126,6 +129,14 @@ class BookingController
 
                 $advertiserId = $this->userModel->createUser($advertiserData);
                 
+                // Send account creation notification
+                $this->notificationService->sendAccountCreation(
+                    $advertiserId, 
+                    $advertiserEmail, 
+                    $advertiserName, 
+                    $advertiserData['password']
+                );
+                
                 // Log activity
                 \App\Middleware\AuthMiddleware::logActivity('advertiser_created', "New advertiser created via booking: $advertiserEmail");
                 
@@ -170,8 +181,20 @@ class BookingController
             // Log activity
             \App\Middleware\AuthMiddleware::logActivity('booking_created', "New booking created: #$bookingId for slot #$slotId");
 
-            // Send email notification (placeholder for now)
-            $this->sendBookingConfirmationEmail($advertiserEmail, $advertiserName, $slot, $bookingId);
+            // Send notifications
+            $bookingData = [
+                'id' => $bookingId,
+                'advertiser_id' => $advertiserId,
+                'advertiser_name' => $advertiserName,
+                'advertiser_email' => $advertiserEmail,
+                'date' => $slot['date'],
+                'start_time' => $slot['start_time'],
+                'end_time' => $slot['end_time'],
+                'station_name' => 'Zaa Radio',
+                'total_amount' => $slot['price']
+            ];
+            
+            $this->notificationService->sendBookingConfirmation($bookingData);
 
             // Redirect to booking summary
             Session::setFlash('success', 'Your booking has been submitted successfully!');
@@ -269,15 +292,6 @@ class BookingController
         return bin2hex(random_bytes(8));
     }
 
-    /**
-     * Send booking confirmation email (placeholder)
-     */
-    private function sendBookingConfirmationEmail($email, $name, $slot, $bookingId)
-    {
-        // This would integrate with PHPMailer in a real implementation
-        // For now, we'll just log it
-        error_log("Booking confirmation email would be sent to: $email for booking #$bookingId");
-    }
 
     /**
      * Redirect to booking page
