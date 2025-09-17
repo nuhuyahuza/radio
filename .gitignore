@@ -1,0 +1,48 @@
+# Dependencies
+/vendor/
+/node_modules/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Cache
+cache/
+tmp/
+
+# Database
+*.sqlite
+*.db
+
+# Docker
+.docker/
+
+# Build artifacts
+/build/
+/dist/
+
+# Composer
+composer.lock
+
+# PHPUnit
+/phpunit.xml
+/coverage/
+
+# Backup files
+*.bak
+*.backup
