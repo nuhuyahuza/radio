@@ -232,4 +232,53 @@ class Session
 
         return true;
     }
+
+    /**
+     * Check if session is valid
+     */
+    public static function isValid()
+    {
+        return session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION);
+    }
+
+    /**
+     * Set secure session parameters
+     */
+    public static function setSecureParams()
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            ini_set('session.cookie_httponly', 1);
+            ini_set('session.cookie_secure', isset($_SERVER['HTTPS']) ? 1 : 0);
+            ini_set('session.use_strict_mode', 1);
+            ini_set('session.cookie_samesite', 'Strict');
+        }
+    }
+
+    /**
+     * Validate session security
+     */
+    public static function validateSecurity()
+    {
+        // Check if session is valid
+        if (!self::isValid()) {
+            self::destroy();
+            return false;
+        }
+        
+        // Check for session hijacking
+        $currentIp = $_SERVER['REMOTE_ADDR'] ?? '';
+        $sessionIp = self::get('user_ip');
+        
+        if ($sessionIp && $sessionIp !== $currentIp) {
+            self::destroy();
+            return false;
+        }
+        
+        // Update session IP if not set
+        if (!$sessionIp) {
+            self::set('user_ip', $currentIp);
+        }
+        
+        return true;
+    }
 }

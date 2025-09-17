@@ -8,8 +8,12 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Utils\Session;
+use App\Utils\SecurityInitializer;
 use App\Controllers\AuthController;
 use App\Middleware\AuthMiddleware;
+
+// Initialize security measures
+SecurityInitializer::initialize();
 
 // Start session
 Session::start();
@@ -116,6 +120,71 @@ switch ($path) {
         $slotController->getSlotsData();
         break;
         
+    case '/manager/bookings':
+        $bookingManagementController = new \App\Controllers\BookingManagementController();
+        $bookingManagementController->showBookingsManagement();
+        break;
+        
+    case (preg_match('/^\/manager\/bookings\/(\d+)$/', $path, $matches) ? true : false):
+        $bookingManagementController = new \App\Controllers\BookingManagementController();
+        $bookingManagementController->showBookingDetails($matches[1]);
+        break;
+        
+    case '/manager/bookings/data':
+        $bookingManagementController = new \App\Controllers\BookingManagementController();
+        $bookingManagementController->getBookingsData();
+        break;
+        
+    case '/admin/users':
+        $userManagementController = new \App\Controllers\UserManagementController();
+        $userManagementController->showUserManagement();
+        break;
+        
+    case (preg_match('/^\/admin\/users\/(\d+)$/', $path, $matches) ? true : false):
+        $userManagementController = new \App\Controllers\UserManagementController();
+        $userManagementController->showUserDetails($matches[1]);
+        break;
+        
+    case '/admin/users/create':
+        $userManagementController = new \App\Controllers\UserManagementController();
+        $userManagementController->showCreateUser();
+        break;
+        
+    case (preg_match('/^\/admin\/users\/edit\/(\d+)$/', $path, $matches) ? true : false):
+        $userManagementController = new \App\Controllers\UserManagementController();
+        $userManagementController->showEditUser($matches[1]);
+        break;
+        
+    case '/admin/users/data':
+        $userManagementController = new \App\Controllers\UserManagementController();
+        $userManagementController->getUsersData();
+        break;
+        
+    case '/admin/reports':
+        $reportsController = new \App\Controllers\ReportsController();
+        $reportsController->showReports();
+        break;
+        
+    case '/admin/reports/booking-analytics':
+        $reportsController = new \App\Controllers\ReportsController();
+        $reportsController->getBookingAnalytics();
+        break;
+        
+    case '/admin/reports/revenue-analytics':
+        $reportsController = new \App\Controllers\ReportsController();
+        $reportsController->getRevenueAnalytics();
+        break;
+        
+    case '/admin/reports/user-analytics':
+        $reportsController = new \App\Controllers\ReportsController();
+        $reportsController->getUserAnalytics();
+        break;
+        
+    case '/admin/reports/export':
+        $reportsController = new \App\Controllers\ReportsController();
+        $reportsController->exportReports();
+        break;
+        
     // Handle POST requests
     default:
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -161,10 +230,40 @@ switch ($path) {
                     $slotController->deleteSlot($matches[1]);
                     break;
                     
-                case (preg_match('/^\/manager\/slots\/cancel\/(\d+)$/', $path, $matches) ? true : false):
-                    $slotController = new \App\Controllers\SlotController();
-                    $slotController->cancelSlot($matches[1]);
-                    break;
+                    case (preg_match('/^\/manager\/slots\/cancel\/(\d+)$/', $path, $matches) ? true : false):
+                        $slotController = new \App\Controllers\SlotController();
+                        $slotController->cancelSlot($matches[1]);
+                        break;
+                        
+                    case (preg_match('/^\/manager\/bookings\/approve\/(\d+)$/', $path, $matches) ? true : false):
+                        $bookingManagementController = new \App\Controllers\BookingManagementController();
+                        $bookingManagementController->approveBooking($matches[1]);
+                        break;
+                        
+                    case (preg_match('/^\/manager\/bookings\/reject\/(\d+)$/', $path, $matches) ? true : false):
+                        $bookingManagementController = new \App\Controllers\BookingManagementController();
+                        $bookingManagementController->rejectBooking($matches[1]);
+                        break;
+                        
+                    case '/admin/users/create':
+                        $userManagementController = new \App\Controllers\UserManagementController();
+                        $userManagementController->createUser();
+                        break;
+                        
+                    case (preg_match('/^\/admin\/users\/edit\/(\d+)$/', $path, $matches) ? true : false):
+                        $userManagementController = new \App\Controllers\UserManagementController();
+                        $userManagementController->updateUser($matches[1]);
+                        break;
+                        
+                    case (preg_match('/^\/admin\/users\/delete\/(\d+)$/', $path, $matches) ? true : false):
+                        $userManagementController = new \App\Controllers\UserManagementController();
+                        $userManagementController->deleteUser($matches[1]);
+                        break;
+                        
+                    case (preg_match('/^\/admin\/users\/toggle-status\/(\d+)$/', $path, $matches) ? true : false):
+                        $userManagementController = new \App\Controllers\UserManagementController();
+                        $userManagementController->toggleUserStatus($matches[1]);
+                        break;
                     
                 default:
                     http_response_code(404);

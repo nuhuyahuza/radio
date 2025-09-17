@@ -61,31 +61,15 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="card">
-                            <div class="card-header">
+                            <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5 class="card-title mb-0">Pending Bookings</h5>
+                                <a href="/manager/bookings" class="btn btn-sm btn-outline-primary">View All</a>
                             </div>
                             <div class="card-body">
-                                <div class="list-group">
-                                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-1">Morning Drive Slot</h6>
-                                            <small class="text-muted">Tomorrow 6:00 AM - 9:00 AM</small>
-                                        </div>
-                                        <div>
-                                            <button class="btn btn-sm btn-success me-1">Approve</button>
-                                            <button class="btn btn-sm btn-danger">Reject</button>
-                                        </div>
-                                    </div>
-                                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-1">Evening Rush Slot</h6>
-                                            <small class="text-muted">Friday 5:00 PM - 7:00 PM</small>
-                                        </div>
-                                        <div>
-                                            <button class="btn btn-sm btn-success me-1">Approve</button>
-                                            <button class="btn btn-sm btn-danger">Reject</button>
-                                        </div>
-                                    </div>
+                                <div class="text-center py-4">
+                                    <i class="fas fa-clock fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">No pending bookings at the moment.</p>
+                                    <a href="/manager/bookings" class="btn btn-primary">Manage Bookings</a>
                                 </div>
                             </div>
                         </div>

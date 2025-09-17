@@ -187,4 +187,33 @@ class User extends BaseModel
         
         return $this->db->fetchAll($sql, [$userId, $userId, $limit]);
     }
+
+    /**
+     * Get all users
+     */
+    public function getAllUsers()
+    {
+        $sql = "SELECT * FROM {$this->table} ORDER BY created_at DESC";
+        return $this->db->fetchAll($sql);
+    }
+
+    /**
+     * Count users by role
+     */
+    public function countUsersByRole($role)
+    {
+        $sql = "SELECT COUNT(*) as count FROM {$this->table} WHERE role = ?";
+        $result = $this->db->fetch($sql, [$role]);
+        return $result['count'];
+    }
+
+    /**
+     * Count active users by role
+     */
+    public function countActiveUsersByRole($role)
+    {
+        $sql = "SELECT COUNT(*) as count FROM {$this->table} WHERE role = ? AND is_active = 1";
+        $result = $this->db->fetch($sql, [$role]);
+        return $result['count'];
+    }
 }

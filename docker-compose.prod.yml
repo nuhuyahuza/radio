@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+    container_name: zaa_radio_app
+    restart: unless-stopped
+    volumes:
+      - ./:/var/www/html
+      - ./docker/php.ini:/usr/local/etc/php/php.ini
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_HOST=db
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+    depends_on:
+      - db
+      - redis
+    networks:
+      - zaa_radio_network
+
+  web:
+    image: nginx:alpine
+    container_name: zaa_radio_web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/prod.conf:/etc/nginx/conf.d/default.conf
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - app
+    networks:
+      - zaa_radio_network
+
+  db:
+    image: mysql:5.7
+    container_name: zaa_radio_db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_DATABASE}
+      - MYSQL_USER=${DB_USERNAME}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"
+    networks:
+      - zaa_radio_network
+
+  redis:
+    image: redis:alpine
+    container_name: zaa_radio_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - zaa_radio_network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: zaa_radio_phpmyadmin
+    restart: unless-stopped
+    environment:
+      - PMA_HOST=db
+      - PMA_USER=${DB_USERNAME}
+      - PMA_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    networks:
+      - zaa_radio_network
+
+volumes:
+  db_data:
+  redis_data:
+
+networks:
+  zaa_radio_network:
+    driver: bridge
+

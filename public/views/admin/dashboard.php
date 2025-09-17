@@ -85,10 +85,13 @@ use App\Utils\Session;
                                 <div class="d-flex justify-content-between">
                                     <div>
                                         <h4 class="card-title">Total Bookings</h4>
-                                        <h2>156</h2>
+                                        <h2>0</h2>
                                     </div>
                                     <i class="fas fa-calendar-check fa-2x"></i>
                                 </div>
+                                <a href="/admin/bookings" class="text-white text-decoration-none">
+                                    <small>View all bookings <i class="fas fa-arrow-right"></i></small>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -98,10 +101,13 @@ use App\Utils\Session;
                                 <div class="d-flex justify-content-between">
                                     <div>
                                         <h4 class="card-title">Revenue</h4>
-                                        <h2>$12,450</h2>
+                                        <h2>$0</h2>
                                     </div>
                                     <i class="fas fa-dollar-sign fa-2x"></i>
                                 </div>
+                                <a href="/admin/reports" class="text-white text-decoration-none">
+                                    <small>View reports <i class="fas fa-arrow-right"></i></small>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -110,11 +116,14 @@ use App\Utils\Session;
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <h4 class="card-title">Active Advertisers</h4>
-                                        <h2>89</h2>
+                                        <h4 class="card-title">Active Users</h4>
+                                        <h2>0</h2>
                                     </div>
                                     <i class="fas fa-users fa-2x"></i>
                                 </div>
+                                <a href="/admin/users" class="text-white text-decoration-none">
+                                    <small>Manage users <i class="fas fa-arrow-right"></i></small>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -124,10 +133,13 @@ use App\Utils\Session;
                                 <div class="d-flex justify-content-between">
                                     <div>
                                         <h4 class="card-title">Pending Approvals</h4>
-                                        <h2>12</h2>
+                                        <h2>0</h2>
                                     </div>
                                     <i class="fas fa-clock fa-2x"></i>
                                 </div>
+                                <a href="/admin/bookings" class="text-white text-decoration-none">
+                                    <small>Review bookings <i class="fas fa-arrow-right"></i></small>
+                                </a>
                             </div>
                         </div>
                     </div>
