@@ -1,3 +1,6 @@
+<?php
+use App\Utils\Session;
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -60,10 +63,18 @@
                         <div class="btn-group me-2">
                             <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle">
-                            <i class="fas fa-user me-1"></i>
-                            Admin User
-                        </button>
+                        <div class="dropdown">
+                            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                <i class="fas fa-user me-1"></i>
+                                <?= htmlspecialchars(Session::getUser()['name'] ?? 'Admin User') ?>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/advertiser/profile"><i class="fas fa-user me-2"></i>Profile</a></li>
+                                <li><a class="dropdown-item" href="/advertiser/settings"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
 

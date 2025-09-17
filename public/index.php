@@ -4,8 +4,15 @@
  * Simple router for handling requests
  */
 
+// Load Composer autoloader
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use App\Utils\Session;
+use App\Controllers\AuthController;
+use App\Middleware\AuthMiddleware;
+
 // Start session
-session_start();
+Session::start();
 
 // Load environment variables
 if (file_exists(__DIR__ . '/../.env')) {
@@ -39,25 +46,38 @@ switch ($path) {
         break;
         
     case '/admin':
+        AuthMiddleware::requireAdmin();
         include __DIR__ . '/views/admin/dashboard.php';
         break;
         
     case '/manager':
+        AuthMiddleware::requireManager();
         include __DIR__ . '/views/manager/dashboard.php';
         break;
         
     case '/advertiser':
+        AuthMiddleware::requireAdvertiser();
         include __DIR__ . '/views/advertiser/dashboard.php';
         break;
         
     case '/login':
-        include __DIR__ . '/views/auth/login.php';
+        $authController = new AuthController();
+        $authController->showLogin();
         break;
         
     case '/logout':
-        session_destroy();
-        header('Location: /');
-        exit;
+        $authController = new AuthController();
+        $authController->logout();
+        break;
+        
+    case '/register':
+        $authController = new AuthController();
+        $authController->showRegister();
+        break;
+        
+    case '/forgot-password':
+        $authController = new AuthController();
+        $authController->showForgotPassword();
         break;
         
     case '/api/slots':
@@ -65,9 +85,35 @@ switch ($path) {
         include __DIR__ . '/api/slots.php';
         break;
         
+    // Handle POST requests
     default:
-        http_response_code(404);
-        include __DIR__ . '/views/404.php';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Handle form submissions
+            switch ($path) {
+                case '/login':
+                    $authController = new AuthController();
+                    $authController->login();
+                    break;
+                    
+                case '/register':
+                    $authController = new AuthController();
+                    $authController->register();
+                    break;
+                    
+                case '/forgot-password':
+                    $authController = new AuthController();
+                    $authController->forgotPassword();
+                    break;
+                    
+                default:
+                    http_response_code(404);
+                    include __DIR__ . '/views/404.php';
+                    break;
+            }
+        } else {
+            http_response_code(404);
+            include __DIR__ . '/views/404.php';
+        }
         break;
 }
 ?>
