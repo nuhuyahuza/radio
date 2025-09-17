@@ -42,7 +42,8 @@ switch ($path) {
         break;
         
     case '/book':
-        include __DIR__ . '/views/booking.php';
+        $bookingController = new \App\Controllers\BookingController();
+        $bookingController->showBookingCalendar();
         break;
         
     case '/admin':
@@ -85,6 +86,16 @@ switch ($path) {
         include __DIR__ . '/api/slots.php';
         break;
         
+    case (preg_match('/^\/booking-summary\/(\d+)$/', $path, $matches) ? true : false):
+        $bookingController = new \App\Controllers\BookingController();
+        $bookingController->showBookingSummary($matches[1]);
+        break;
+        
+    case '/booking-success':
+        $bookingController = new \App\Controllers\BookingController();
+        $bookingController->showBookingSuccess();
+        break;
+        
     // Handle POST requests
     default:
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -103,6 +114,16 @@ switch ($path) {
                 case '/forgot-password':
                     $authController = new AuthController();
                     $authController->forgotPassword();
+                    break;
+                    
+                case '/book':
+                    $bookingController = new \App\Controllers\BookingController();
+                    $bookingController->createBooking();
+                    break;
+                    
+                case (preg_match('/^\/booking-confirm\/(\d+)$/', $path, $matches) ? true : false):
+                    $bookingController = new \App\Controllers\BookingController();
+                    $bookingController->confirmBooking($matches[1]);
                     break;
                     
                 default:

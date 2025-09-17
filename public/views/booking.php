@@ -1,3 +1,6 @@
+<?php
+use App\Utils\Session;
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -56,18 +59,27 @@
                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                 </div>
                                 <div class="modal-body">
-                                    <form id="bookingForm">
+                                    <?php if (Session::hasFlash('error')): ?>
+                                        <div class="alert alert-danger">
+                                            <?= htmlspecialchars(Session::getFlash('error')) ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <form id="bookingForm" method="POST" action="/book">
+                                        <input type="hidden" name="csrf_token" value="<?= Session::getCsrfToken() ?>">
+                                        <input type="hidden" name="slot_id" id="slotId">
+                                        
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <div class="mb-3">
                                                     <label for="advertiserName" class="form-label">Full Name *</label>
-                                                    <input type="text" class="form-control" id="advertiserName" required>
+                                                    <input type="text" class="form-control" id="advertiserName" name="advertiser_name" required>
                                                 </div>
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="mb-3">
                                                     <label for="advertiserEmail" class="form-label">Email *</label>
-                                                    <input type="email" class="form-control" id="advertiserEmail" required>
+                                                    <input type="email" class="form-control" id="advertiserEmail" name="advertiser_email" required>
                                                 </div>
                                             </div>
                                         </div>
@@ -75,19 +87,19 @@
                                             <div class="col-md-6">
                                                 <div class="mb-3">
                                                     <label for="advertiserPhone" class="form-label">Phone *</label>
-                                                    <input type="tel" class="form-control" id="advertiserPhone" required>
+                                                    <input type="tel" class="form-control" id="advertiserPhone" name="advertiser_phone" required>
                                                 </div>
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="mb-3">
                                                     <label for="companyName" class="form-label">Company</label>
-                                                    <input type="text" class="form-control" id="companyName">
+                                                    <input type="text" class="form-control" id="companyName" name="company_name">
                                                 </div>
                                             </div>
                                         </div>
                                         <div class="mb-3">
                                             <label for="advertisementMessage" class="form-label">Advertisement Message *</label>
-                                            <textarea class="form-control" id="advertisementMessage" rows="3" required placeholder="Describe your advertisement content..."></textarea>
+                                            <textarea class="form-control" id="advertisementMessage" name="advertisement_message" rows="3" required placeholder="Describe your advertisement content..."></textarea>
                                         </div>
                                         <div class="mb-3">
                                             <label for="selectedSlot" class="form-label">Selected Time Slot</label>
@@ -121,15 +133,43 @@
                 },
                 events: '/api/slots',
                 dateClick: function(info) {
-                    // For now, show a placeholder message
-                    alert('Slot booking for ' + info.dateStr + ' - This will be implemented in the next steps!');
+                    // Show message for date clicks
+                    const date = new Date(info.dateStr);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    
+                    if (date < today) {
+                        alert('Cannot book slots for past dates.');
+                        return;
+                    }
+                    
+                    // Find available slots for this date
+                    const events = calendar.getEvents();
+                    const dayEvents = events.filter(event => {
+                        const eventDate = new Date(event.start);
+                        return eventDate.toDateString() === date.toDateString() && 
+                               event.extendedProps.status === 'available';
+                    });
+                    
+                    if (dayEvents.length === 0) {
+                        alert('No available slots for ' + info.dateStr);
+                        return;
+                    }
+                    
+                    alert('Click on an available time slot to book it.');
                 },
                 eventClick: function(info) {
                     // Show booking form for available slots
                     if (info.event.extendedProps.status === 'available') {
-                        document.getElementById('selectedSlot').value = info.event.title + ' - ' + info.event.start.toLocaleString();
+                        // Set slot information
+                        document.getElementById('slotId').value = info.event.extendedProps.slotId;
+                        document.getElementById('selectedSlot').value = info.event.title + ' - ' + info.event.start.toLocaleDateString();
+                        
+                        // Show modal
                         const bookingModal = new bootstrap.Modal(document.getElementById('bookingModal'));
                         bookingModal.show();
+                    } else {
+                        alert('This slot is not available for booking.');
                     }
                 }
             });
@@ -137,8 +177,27 @@
         });
 
         function submitBooking() {
-            // Placeholder for booking submission
-            alert('Booking submission will be implemented in the next steps!');
+            // Validate form
+            const form = document.getElementById('bookingForm');
+            const requiredFields = form.querySelectorAll('[required]');
+            let isValid = true;
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+            
+            if (!isValid) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            
+            // Submit form
+            form.submit();
         }
     </script>
 </body>
