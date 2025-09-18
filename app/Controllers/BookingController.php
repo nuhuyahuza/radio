@@ -48,7 +48,7 @@ class BookingController
     }
 
     /**
-     * Process booking form submission
+     * Process booking form submission - now creates a draft only
      */
     public function createBooking()
     {
@@ -65,7 +65,6 @@ class BookingController
         // Validate CSRF token
         $csrfToken = $_POST['csrf_token'] ?? '';
         if (!Session::verifyCsrfToken($csrfToken)) {
-            error_log('[CSRF] Mismatch. Provided=' . ($csrfToken ?: '(empty)') . ' Current=' . (Session::get('csrf_token') ?: '(empty)') . ' Prev=' . (Session::get('csrf_token_prev') ?: '(empty)') . ' SID=' . (session_id() ?: '(none)'));
             if ($this->isAjaxRequest()) {
                 $this->jsonResponse(['success' => false, 'message' => 'Invalid security token. Please try again.'], 400);
             } else {
@@ -84,27 +83,11 @@ class BookingController
 
         // Validate input
         $errors = [];
-
-        if (empty($slotId)) {
-            $errors[] = 'Please select a valid time slot.';
-        }
-
-        if (empty($advertiserName)) {
-            $errors[] = 'Name is required.';
-        }
-
-        if (empty($advertiserEmail) || !filter_var($advertiserEmail, FILTER_VALIDATE_EMAIL)) {
-            $errors[] = 'Valid email is required.';
-        }
-
-        if (empty($advertiserPhone)) {
-            $errors[] = 'Phone number is required.';
-        }
-
-        if (empty($advertisementMessage)) {
-            $errors[] = 'Advertisement message is required.';
-        }
-
+        if (empty($slotId)) { $errors[] = 'Please select a valid time slot.'; }
+        if (empty($advertiserName)) { $errors[] = 'Name is required.'; }
+        if (empty($advertiserEmail) || !filter_var($advertiserEmail, FILTER_VALIDATE_EMAIL)) { $errors[] = 'Valid email is required.'; }
+        if (empty($advertiserPhone)) { $errors[] = 'Phone number is required.'; }
+        if (empty($advertisementMessage)) { $errors[] = 'Advertisement message is required.'; }
         if (!empty($errors)) {
             if ($this->isAjaxRequest()) {
                 $this->jsonResponse(['success' => false, 'message' => implode(' ', $errors)], 400);
@@ -115,135 +98,183 @@ class BookingController
             return;
         }
 
+        // Validate slot is available
+        $slot = $this->slotModel->find($slotId);
+        if (!$slot) {
+            if ($this->isAjaxRequest()) { $this->jsonResponse(['success' => false, 'message' => 'Selected slot not found.'], 404); return; }
+            Session::setFlash('error', 'Selected slot not found.');
+            $this->redirectToBooking();
+            return;
+        }
+        if ($slot['status'] !== 'available' || $this->bookingModel->isSlotBooked($slotId)) {
+            if ($this->isAjaxRequest()) { $this->jsonResponse(['success' => false, 'message' => 'Selected slot is no longer available.'], 409); return; }
+            Session::setFlash('error', 'Selected slot is no longer available.');
+            $this->redirectToBooking();
+            return;
+        }
+
+        // Build draft and store in session
+        $draft = [
+            'slot' => [
+                'id' => $slot['id'],
+                'date' => $slot['date'],
+                'start_time' => $slot['start_time'],
+                'end_time' => $slot['end_time'],
+                'price' => $slot['price'],
+                'station_name' => 'Zaa Radio'
+            ],
+            'advertiser' => [
+                'name' => $advertiserName,
+                'email' => $advertiserEmail,
+                'phone' => $advertiserPhone,
+                'company' => $companyName,
+            ],
+            'message' => $advertisementMessage
+        ];
+        Session::set('booking_draft', $draft);
+
+        // Return success -> redirect to draft summary (no DB writes yet)
+        if ($this->isAjaxRequest()) {
+            $this->jsonResponse(['success' => true, 'redirect' => '/booking-summary']);
+            return;
+        }
+        header('Location: /booking-summary');
+        exit;
+    }
+
+    /**
+     * Show draft booking summary (from session)
+     */
+    public function showDraftSummary()
+    {
+        $draft = Session::get('booking_draft');
+        if ($draft) {
+            // Map to view variables expected by summary template
+            $booking = [
+                'id' => null,
+                'status' => 'draft',
+                'date' => $draft['slot']['date'],
+                'start_time' => $draft['slot']['start_time'],
+                'end_time' => $draft['slot']['end_time'],
+                'station_name' => $draft['slot']['station_name'],
+                'total_amount' => $draft['slot']['price'],
+                'advertiser_name' => $draft['advertiser']['name'],
+                'advertiser_email' => $draft['advertiser']['email'],
+                'advertiser_phone' => $draft['advertiser']['phone'],
+                'company_name' => $draft['advertiser']['company'],
+                'message' => $draft['message'],
+            ];
+        }
+        // Always include the summary view; it can hydrate from sessionStorage if no server draft
+        include __DIR__ . '/../../public/views/booking-summary.php';
+    }
+
+    /**
+     * Confirm draft -> persist booking and send notifications
+     */
+    public function confirmDraft()
+    {
+        \App\Utils\Session::start();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') { $this->redirectToBooking(); return; }
+        $csrfToken = $_POST['csrf_token'] ?? '';
+        if (!Session::verifyCsrfToken($csrfToken)) { Session::setFlash('error', 'Invalid security token. Please try again.'); $this->redirectToBooking(); return; }
+
+        // Prefer client-provided draft (from sessionStorage)
+        $clientPayload = $_POST['draft_payload'] ?? '';
+        if ($clientPayload) {
+            try { $draft = json_decode($clientPayload, true, 512, JSON_THROW_ON_ERROR); }
+            catch (\Throwable $e) { $draft = null; }
+        }
+        if (empty($draft)) { $draft = Session::get('booking_draft'); }
+        if (!$draft) { Session::setFlash('error', 'No booking draft found.'); $this->redirectToBooking(); return; }
+
+        // Minimal validation
+        $slotId = (int)($draft['slot']['id'] ?? 0);
+        if (!$slotId) { Session::setFlash('error', 'Invalid slot.'); $this->redirectToBooking(); return; }
+        $slot = $this->slotModel->find($slotId);
+        if (!$slot || $slot['status'] !== 'available' || $this->bookingModel->isSlotBooked($slotId)) {
+            Session::setFlash('error', 'Selected slot is no longer available.');
+            $this->redirectToBooking();
+            return;
+        }
+
         try {
-            // Start transaction
             $this->db->beginTransaction();
 
-            // Check if slot exists and is available
-            $slot = $this->slotModel->find($slotId);
-            if (!$slot) {
-                throw new \Exception('Selected slot not found.');
-            }
-
-            if ($slot['status'] !== 'available') {
-                throw new \Exception('Selected slot is no longer available.');
-            }
-
-            // Check if slot is already booked
-            if ($this->bookingModel->isSlotBooked($slotId)) {
-                throw new \Exception('Selected slot has already been booked.');
-            }
-
             // Find or create advertiser
-            $advertiser = $this->userModel->findByEmail($advertiserEmail);
-            
+            $email = trim($draft['advertiser']['email'] ?? '');
+            $advertiser = $email ? $this->userModel->findByEmail($email) : null;
             if (!$advertiser) {
-                // Create new advertiser
-                $advertiserData = [
-                    'name' => $advertiserName,
-                    'email' => $advertiserEmail,
-                    'password' => $this->generateTemporaryPassword(),
+                $tempPassword = $this->generateTemporaryPassword();
+                $advertiserId = $this->userModel->createUser([
+                    'name' => trim($draft['advertiser']['name'] ?? ''),
+                    'email' => $email,
+                    'password' => $tempPassword,
                     'role' => 'advertiser',
-                    'phone' => $advertiserPhone,
-                    'company' => $companyName,
+                    'phone' => trim($draft['advertiser']['phone'] ?? ''),
+                    'company' => trim($draft['advertiser']['company'] ?? ''),
                     'is_active' => true,
                     'email_verified_at' => date('Y-m-d H:i:s')
-                ];
-
-                $advertiserId = $this->userModel->createUser($advertiserData);
-                
-                // Send account creation notification
-                $this->notificationService->sendAccountCreation(
-                    $advertiserId, 
-                    $advertiserEmail, 
-                    $advertiserName, 
-                    $advertiserData['password']
-                );
-                
-                // Log activity
-                \App\Middleware\AuthMiddleware::logActivity('advertiser_created', "New advertiser created via booking: $advertiserEmail");
-                
+                ]);
+                $this->notificationService->sendAccountCreation($advertiserId, $email, trim($draft['advertiser']['name'] ?? ''), $tempPassword);
             } else {
-                // Update existing advertiser info if needed
                 $advertiserId = $advertiser['id'];
-                
-                $updateData = [];
-                if ($advertiser['name'] !== $advertiserName) {
-                    $updateData['name'] = $advertiserName;
-                }
-                if ($advertiser['phone'] !== $advertiserPhone) {
-                    $updateData['phone'] = $advertiserPhone;
-                }
-                if ($advertiser['company'] !== $companyName) {
-                    $updateData['company'] = $companyName;
-                }
-                
-                if (!empty($updateData)) {
-                    $this->userModel->update($advertiserId, $updateData);
-                }
             }
 
-            // Create booking
-            $bookingData = [
+            // Persist booking
+            $bookingId = $this->bookingModel->create([
                 'advertiser_id' => $advertiserId,
                 'slot_id' => $slotId,
                 'status' => 'pending',
-                'message' => $advertisementMessage,
+                'message' => trim($draft['message'] ?? ''),
                 'total_amount' => $slot['price'],
                 'payment_status' => 'pending'
-            ];
-
-            $bookingId = $this->bookingModel->create($bookingData);
+            ]);
 
             // Mark slot as booked
             $this->slotModel->markAsBooked($slotId);
 
-            // Commit transaction
             $this->db->commit();
 
-            // Log activity
-            \App\Middleware\AuthMiddleware::logActivity('booking_created', "New booking created: #$bookingId for slot #$slotId");
-
-            // Send notifications
-            $bookingData = [
+            // Send booking confirmation
+            $this->notificationService->sendBookingConfirmation([
                 'id' => $bookingId,
                 'advertiser_id' => $advertiserId,
-                'advertiser_name' => $advertiserName,
-                'advertiser_email' => $advertiserEmail,
+                'advertiser_name' => trim($draft['advertiser']['name'] ?? ''),
+                'advertiser_email' => $email,
                 'date' => $slot['date'],
                 'start_time' => $slot['start_time'],
                 'end_time' => $slot['end_time'],
                 'station_name' => 'Zaa Radio',
                 'total_amount' => $slot['price']
-            ];
-            
-            $this->notificationService->sendBookingConfirmation($bookingData);
+            ]);
 
-            // Return success response
-            if ($this->isAjaxRequest()) {
-                $this->jsonResponse([
-                    'success' => true, 
-                    'message' => 'Your booking has been submitted successfully!',
-                    'redirect' => "/booking-summary/$bookingId"
-                ]);
-            } else {
-                Session::setFlash('success', 'Your booking has been submitted successfully!');
-                header("Location: /booking-summary/$bookingId");
-                exit;
-            }
+            // Clear any server-side draft
+            Session::set('booking_draft', null);
 
+            Session::setFlash('success', 'Your booking has been submitted successfully!');
+            header("Location: /booking-summary/$bookingId");
+            exit;
         } catch (\Exception $e) {
-            // Rollback transaction
             $this->db->rollback();
-            
-            if ($this->isAjaxRequest()) {
-                $this->jsonResponse(['success' => false, 'message' => 'Booking failed: ' . $e->getMessage()], 500);
-            } else {
-                Session::setFlash('error', 'Booking failed: ' . $e->getMessage());
-                $this->redirectToBooking();
-            }
-            return;
+            Session::setFlash('error', 'Confirmation failed: ' . $e->getMessage());
+            header('Location: /booking-summary');
+            exit;
         }
+    }
+
+    /**
+     * Cancel draft and return to booking
+     */
+    public function cancelDraft()
+    {
+        \App\Utils\Session::start();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') { $this->redirectToBooking(); return; }
+        $csrfToken = $_POST['csrf_token'] ?? '';
+        if (!Session::verifyCsrfToken($csrfToken)) { Session::setFlash('error', 'Invalid security token. Please try again.'); $this->redirectToBooking(); return; }
+        Session::set('booking_draft', null);
+        Session::setFlash('success', 'Booking cancelled.');
+        $this->redirectToBooking();
     }
 
     /**

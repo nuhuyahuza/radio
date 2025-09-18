@@ -114,6 +114,21 @@ switch ($path) {
         $bookingController->confirmBooking($matches[1]);
         break;
         
+    case '/booking-summary':
+        $bookingController = new \App\Controllers\BookingController();
+        $bookingController->showDraftSummary();
+        break;
+
+    case '/booking/confirm':
+        $bookingController = new \App\Controllers\BookingController();
+        $bookingController->confirmDraft();
+        break;
+
+    case '/booking/cancel':
+        $bookingController = new \App\Controllers\BookingController();
+        $bookingController->cancelDraft();
+        break;
+        
     case '/manager/slots':
         $slotController = new \App\Controllers\SlotController();
         $slotController->showSlotsManagement();
