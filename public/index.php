@@ -100,6 +100,11 @@ switch ($path) {
         $bookingController->showBookingSuccess();
         break;
         
+    case (preg_match('/^\/booking\/(\d+)\/confirm$/', $path, $matches) ? true : false):
+        $bookingController = new \App\Controllers\BookingController();
+        $bookingController->confirmBooking($matches[1]);
+        break;
+        
     case '/manager/slots':
         $slotController = new \App\Controllers\SlotController();
         $slotController->showSlotsManagement();

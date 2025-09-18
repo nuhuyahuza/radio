@@ -44,15 +44,23 @@ class BookingController
     public function createBooking()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirectToBooking();
+            if ($this->isAjaxRequest()) {
+                $this->jsonResponse(['success' => false, 'message' => 'Invalid request method'], 405);
+            } else {
+                $this->redirectToBooking();
+            }
             return;
         }
 
         // Validate CSRF token
         $csrfToken = $_POST['csrf_token'] ?? '';
         if (!Session::verifyCsrfToken($csrfToken)) {
-            Session::setFlash('error', 'Invalid security token. Please try again.');
-            $this->redirectToBooking();
+            if ($this->isAjaxRequest()) {
+                $this->jsonResponse(['success' => false, 'message' => 'Invalid security token. Please try again.'], 400);
+            } else {
+                Session::setFlash('error', 'Invalid security token. Please try again.');
+                $this->redirectToBooking();
+            }
             return;
         }
 
@@ -87,8 +95,12 @@ class BookingController
         }
 
         if (!empty($errors)) {
-            Session::setFlash('error', implode(' ', $errors));
-            $this->redirectToBooking();
+            if ($this->isAjaxRequest()) {
+                $this->jsonResponse(['success' => false, 'message' => implode(' ', $errors)], 400);
+            } else {
+                Session::setFlash('error', implode(' ', $errors));
+                $this->redirectToBooking();
+            }
             return;
         }
 
@@ -196,17 +208,29 @@ class BookingController
             
             $this->notificationService->sendBookingConfirmation($bookingData);
 
-            // Redirect to booking summary
-            Session::setFlash('success', 'Your booking has been submitted successfully!');
-            header("Location: /booking-summary/$bookingId");
-            exit;
+            // Return success response
+            if ($this->isAjaxRequest()) {
+                $this->jsonResponse([
+                    'success' => true, 
+                    'message' => 'Your booking has been submitted successfully!',
+                    'redirect' => "/booking-summary/$bookingId"
+                ]);
+            } else {
+                Session::setFlash('success', 'Your booking has been submitted successfully!');
+                header("Location: /booking-summary/$bookingId");
+                exit;
+            }
 
         } catch (\Exception $e) {
             // Rollback transaction
             $this->db->rollback();
             
-            Session::setFlash('error', 'Booking failed: ' . $e->getMessage());
-            $this->redirectToBooking();
+            if ($this->isAjaxRequest()) {
+                $this->jsonResponse(['success' => false, 'message' => 'Booking failed: ' . $e->getMessage()], 500);
+            } else {
+                Session::setFlash('error', 'Booking failed: ' . $e->getMessage());
+                $this->redirectToBooking();
+            }
             return;
         }
     }
@@ -292,6 +316,26 @@ class BookingController
         return bin2hex(random_bytes(8));
     }
 
+
+    /**
+     * Check if request is AJAX
+     */
+    private function isAjaxRequest()
+    {
+        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+               strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    }
+
+    /**
+     * Send JSON response
+     */
+    private function jsonResponse($data, $httpCode = 200)
+    {
+        http_response_code($httpCode);
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
+    }
 
     /**
      * Redirect to booking page
