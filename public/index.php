@@ -47,7 +47,11 @@ switch ($path) {
         
     case '/book':
         $bookingController = new \App\Controllers\BookingController();
-        $bookingController->showBookingCalendar();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $bookingController->createBooking();
+        } else {
+            $bookingController->showBookingCalendar();
+        }
         break;
         
     case '/admin':
@@ -210,10 +214,6 @@ switch ($path) {
                     $authController->forgotPassword();
                     break;
                     
-                case '/book':
-                    $bookingController = new \App\Controllers\BookingController();
-                    $bookingController->createBooking();
-                    break;
                     
                 case (preg_match('/^\/booking-confirm\/(\d+)$/', $path, $matches) ? true : false):
                     $bookingController = new \App\Controllers\BookingController();

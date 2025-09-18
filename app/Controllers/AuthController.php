@@ -214,7 +214,7 @@ class AuthController
             header('Location: /login');
             exit;
 
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Session::setFlash('error', 'Registration failed. Please try again.');
             $this->redirectToRegister();
             return;
