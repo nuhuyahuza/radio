@@ -51,12 +51,7 @@ class SecurityMiddleware
      */
     public static function validateCsrfToken($token)
     {
-        if (!Session::hasFlash('csrf_token')) {
-            return false;
-        }
-        
-        $sessionToken = Session::getFlash('csrf_token');
-        return hash_equals($sessionToken, $token);
+        return \App\Utils\Session::verifyCsrfToken($token);
     }
 
     /**
@@ -64,9 +59,7 @@ class SecurityMiddleware
      */
     public static function generateCsrfToken()
     {
-        $token = bin2hex(random_bytes(32));
-        Session::setFlash('csrf_token', $token);
-        return $token;
+        return \App\Utils\Session::setCsrfToken();
     }
 
     /**

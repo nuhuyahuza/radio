@@ -12,11 +12,11 @@ use App\Utils\SecurityInitializer;
 use App\Controllers\AuthController;
 use App\Middleware\AuthMiddleware;
 
+// Start session early so all later checks (including CSRF) have access
+Session::start();
+
 // Initialize security measures
 SecurityInitializer::initialize();
-
-// Start session
-Session::start();
 
 // Load environment variables
 if (file_exists(__DIR__ . '/../.env')) {
@@ -92,6 +92,11 @@ switch ($path) {
     case '/api/slots':
         header('Content-Type: application/json');
         include __DIR__ . '/api/slots.php';
+        break;
+        
+    case '/api/csrf-token':
+        header('Content-Type: application/json');
+        include __DIR__ . '/api/csrf-token.php';
         break;
         
     case (preg_match('/^\/booking-summary\/(\d+)$/', $path, $matches) ? true : false):

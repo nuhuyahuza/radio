@@ -524,22 +524,32 @@ use App\Utils\Session;
                 return;
             }
             
+            // Read XSRF-TOKEN cookie and use it as CSRF source
+            const xsrfCookie = document.cookie.split('; ').find(row => row.startsWith('XSRF-TOKEN='));
+            const xsrfToken = xsrfCookie ? decodeURIComponent(xsrfCookie.split('=')[1]) : '';
+            const tokenInput = form.querySelector('input[name="csrf_token"]');
+            if (tokenInput) {
+                tokenInput.value = xsrfToken;
+            }
+
             // Show loading
             document.getElementById('loading').style.display = 'block';
             form.style.display = 'none';
-            
+
             // Submit form
             fetch('/book', {
                 method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                headers: { 
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-Token': xsrfToken
                 },
+                credentials: 'same-origin',
+                cache: 'no-store',
                 body: new FormData(form)
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Redirect to success page
                     window.location.href = data.redirect || '/booking-success';
                 } else {
                     showAlert(data.message || 'Booking failed. Please try again.', 'danger');

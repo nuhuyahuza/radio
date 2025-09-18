@@ -111,19 +111,30 @@ class SecurityInitializer
     private static function initializeSessionSecurity($config)
     {
         $sessionConfig = $config['session'] ?? [];
+        $httponly = isset($sessionConfig['httponly']) ? (int)$sessionConfig['httponly'] : 1;
+        $strictMode = isset($sessionConfig['use_strict_mode']) ? (int)$sessionConfig['use_strict_mode'] : 1;
+        $samesite = $sessionConfig['samesite'] ?? 'Strict';
+        $timeout = isset($sessionConfig['timeout']) ? (int)$sessionConfig['timeout'] : 3600;
+        $secure = isset($sessionConfig['secure'])
+            ? (int)$sessionConfig['secure']
+            : ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 1 : 0);
+
+        // Ensure a writable session save path
+        $projectRoot = dirname(__DIR__, 2); // app/Utils -> project root
+        $sessionPath = $projectRoot . '/storage/sessions';
+        if (!is_dir($sessionPath)) {
+            @mkdir($sessionPath, 0775, true);
+        }
+        if (is_dir($sessionPath) && is_writable($sessionPath)) {
+            ini_set('session.save_path', $sessionPath);
+        }
 
         if (session_status() === PHP_SESSION_NONE) {
-            // Configure session security
-            ini_set('session.cookie_httponly', $sessionConfig['httponly'] ? 1 : 0);
-            ini_set('session.cookie_secure', $sessionConfig['secure'] ? 1 : 0);
-            ini_set('session.use_strict_mode', $sessionConfig['use_strict_mode'] ? 1 : 0);
-            ini_set('session.cookie_samesite', $sessionConfig['samesite'] ?? 'Strict');
-            
-            // Set session timeout
-            if (isset($sessionConfig['timeout'])) {
-                ini_set('session.gc_maxlifetime', $sessionConfig['timeout']);
-            }
-
+            ini_set('session.cookie_httponly', $httponly);
+            ini_set('session.cookie_secure', $secure);
+            ini_set('session.use_strict_mode', $strictMode);
+            ini_set('session.cookie_samesite', $samesite);
+            ini_set('session.gc_maxlifetime', $timeout);
             session_start();
         }
     }
@@ -276,13 +287,11 @@ class SecurityInitializer
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $token = $_POST['csrf_token'] ?? '';
-            
-            if (!SecurityMiddleware::validateCsrfToken($token)) {
-                SecurityMiddleware::logSecurityEvent('csrf_token_invalid', [
+            if (!\App\Utils\Session::verifyCsrfToken($token)) {
+                \App\Middleware\SecurityMiddleware::logSecurityEvent('csrf_token_invalid', [
                     'token' => $token,
                     'uri' => $_SERVER['REQUEST_URI'] ?? ''
                 ]);
-                
                 http_response_code(403);
                 include __DIR__ . '/../../public/views/403.php';
                 exit;
@@ -290,4 +299,3 @@ class SecurityInitializer
         }
     }
 }
-

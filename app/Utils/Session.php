@@ -192,6 +192,11 @@ class Session
      */
     public static function setCsrfToken()
     {
+        // Preserve previous token to tolerate race conditions
+        $current = self::get('csrf_token');
+        if (!empty($current)) {
+            self::set('csrf_token_prev', $current);
+        }
         $token = bin2hex(random_bytes(32));
         self::set('csrf_token', $token);
         return $token;
@@ -210,7 +215,23 @@ class Session
      */
     public static function verifyCsrfToken($token)
     {
-        return hash_equals(self::getCsrfToken(), $token);
+        // Allow token via header too (for AJAX)
+        $headerToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+        $provided = trim((string)($token ?: $headerToken));
+        $current = (string) self::get('csrf_token');
+        $previous = (string) self::get('csrf_token_prev');
+        if (!empty($current) && hash_equals($current, $provided)) {
+            return true;
+        }
+        if (!empty($previous) && hash_equals($previous, $provided)) {
+            return true;
+        }
+        // Double-submit cookie fallback
+        $cookieToken = $_COOKIE['XSRF-TOKEN'] ?? '';
+        if (!empty($cookieToken) && !empty($provided) && hash_equals((string)$cookieToken, (string)$provided)) {
+            return true;
+        }
+        return false;
     }
 
     /**

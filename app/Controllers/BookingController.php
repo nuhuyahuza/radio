@@ -35,6 +35,15 @@ class BookingController
      */
     public function showBookingCalendar()
     {
+        $token = \App\Utils\Session::getCsrfToken() ?: \App\Utils\Session::setCsrfToken();
+        // Set double-submit cookie (readable by JS)
+        setcookie('XSRF-TOKEN', $token, [
+            'expires' => 0,
+            'path' => '/',
+            'secure' => (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on'),
+            'httponly' => false,
+            'samesite' => 'Lax'
+        ]);
         include __DIR__ . '/../../public/views/booking.php';
     }
 
@@ -43,6 +52,7 @@ class BookingController
      */
     public function createBooking()
     {
+        \App\Utils\Session::start();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             if ($this->isAjaxRequest()) {
                 $this->jsonResponse(['success' => false, 'message' => 'Invalid request method'], 405);
@@ -55,6 +65,7 @@ class BookingController
         // Validate CSRF token
         $csrfToken = $_POST['csrf_token'] ?? '';
         if (!Session::verifyCsrfToken($csrfToken)) {
+            error_log('[CSRF] Mismatch. Provided=' . ($csrfToken ?: '(empty)') . ' Current=' . (Session::get('csrf_token') ?: '(empty)') . ' Prev=' . (Session::get('csrf_token_prev') ?: '(empty)') . ' SID=' . (session_id() ?: '(none)'));
             if ($this->isAjaxRequest()) {
                 $this->jsonResponse(['success' => false, 'message' => 'Invalid security token. Please try again.'], 400);
             } else {
