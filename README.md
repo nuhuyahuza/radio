@@ -119,6 +119,59 @@ radio/
 ### Bookings Table
 - `id`, `advertiser_id`, `slot_id`, `status`, `message`, `created_at`, `updated_at`
 
+## Database ERD
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│     users       │    │    stations     │    │      slots      │
+├─────────────────┤    ├─────────────────┤    ├─────────────────┤
+│ id (PK)         │    │ id (PK)         │    │ id (PK)         │
+│ name            │    │ name            │    │ station_id (FK) │
+│ email (UNIQUE)  │    │ frequency       │    │ date            │
+│ password        │    │ location        │    │ start_time      │
+│ role            │    │ created_at      │    │ end_time        │
+│ phone           │    │ updated_at      │    │ price           │
+│ company         │    └─────────────────┘    │ status          │
+│ is_active       │                          │ created_at      │
+│ email_verified  │                          │ updated_at      │
+│ last_login      │                          └─────────────────┘
+│ created_at      │                                   │
+│ updated_at      │                                   │
+└─────────────────┘                                   │
+         │                                            │
+         │                                            │
+         │ 1:N                                        │ 1:N
+         │                                            │
+         ▼                                            ▼
+┌─────────────────┐                          ┌─────────────────┐
+│    bookings     │                          │  audit_logs     │
+├─────────────────┤                          ├─────────────────┤
+│ id (PK)         │                          │ id (PK)         │
+│ advertiser_id   │                          │ user_id (FK)    │
+│ slot_id (FK)    │                          │ action          │
+│ status          │                          │ table_name      │
+│ message         │                          │ record_id       │
+│ created_at      │                          │ old_values      │
+│ updated_at      │                          │ new_values      │
+└─────────────────┘                          │ created_at      │
+         │                                   └─────────────────┘
+         │
+         │ 1:N
+         │
+         ▼
+┌─────────────────┐
+│ notifications   │
+├─────────────────┤
+│ id (PK)         │
+│ user_id (FK)    │
+│ type            │
+│ title           │
+│ message         │
+│ is_read         │
+│ created_at      │
+└─────────────────┘
+```
+
 ## Development
 
 ### Running Tests
@@ -151,6 +204,24 @@ docker-compose -f docker-compose.prod.yml exec app php migrate.php
 ## Staging
 
 `docker-compose.staging.yml` exposes web on 8081 and MySQL on 3307.
+
+### Staging Deployment Checklist
+
+- [ ] Copy `.env.example` to `.env.staging`
+- [ ] Update staging environment variables:
+  - `APP_ENV=staging`
+  - `DB_HOST=db`
+  - `DB_NAME=zaa_radio_staging`
+  - `MAIL_HOST=your-smtp-server`
+  - `REDIS_HOST=redis`
+- [ ] Deploy: `docker-compose -f docker-compose.staging.yml up -d --build`
+- [ ] Run migrations: `docker-compose -f docker-compose.staging.yml exec app php migrate.php`
+- [ ] Seed data: `docker-compose -f docker-compose.staging.yml exec app php seeds/seed.php`
+- [ ] Test all user roles and workflows
+- [ ] Verify email notifications work
+- [ ] Check Redis queue processing
+- [ ] Test export functionality (CSV/PDF/Excel)
+- [ ] Verify SSL/HTTPS if configured
 
 ## Exports & Queue
 

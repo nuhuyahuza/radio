@@ -34,13 +34,15 @@ try {
 
     // Clear existing data (in reverse order of dependencies)
     echo "Clearing existing data...\n";
-    $pdo->exec("DELETE FROM notifications");
-    $pdo->exec("DELETE FROM audit_logs");
-    $pdo->exec("DELETE FROM password_resets");
-    $pdo->exec("DELETE FROM bookings");
-    $pdo->exec("DELETE FROM slots");
-    $pdo->exec("DELETE FROM stations");
-    $pdo->exec("DELETE FROM users");
+    $tables = ['notifications', 'audit_logs', 'password_resets', 'bookings', 'slots', 'stations', 'users'];
+    foreach ($tables as $table) {
+        try {
+            $pdo->exec("DELETE FROM $table");
+        } catch (PDOException $e) {
+            // Table might not exist, continue
+            echo "Note: Table $table not found or already empty\n";
+        }
+    }
 
     // Reset auto-increment counters
     $pdo->exec("ALTER TABLE users AUTO_INCREMENT = 1");

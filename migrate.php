@@ -87,9 +87,14 @@ try {
         $statements = array_filter(
             array_map('trim', explode(';', $sql)),
             function($stmt) {
-                return !empty($stmt) && !preg_match('/^--/', $stmt);
+                return !empty($stmt) && !preg_match('/^\s*--/', $stmt);
             }
         );
+        
+        // If no statements found (file doesn't end with semicolon), treat entire content as one statement
+        if (empty($statements)) {
+            $statements = [trim($sql)];
+        }
 
         // Execute each statement
         foreach ($statements as $statement) {
