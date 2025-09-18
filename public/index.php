@@ -51,18 +51,18 @@ switch ($path) {
         break;
         
     case '/admin':
-        AuthMiddleware::requireAdmin();
-        include __DIR__ . '/views/admin/dashboard.php';
+        $adminController = new \App\Controllers\AdminDashboardController();
+        $adminController->showDashboard();
         break;
         
     case '/manager':
-        AuthMiddleware::requireManager();
-        include __DIR__ . '/views/manager/dashboard.php';
+        $managerController = new \App\Controllers\ManagerDashboardController();
+        $managerController->showDashboard();
         break;
         
     case '/advertiser':
-        AuthMiddleware::requireAdvertiser();
-        include __DIR__ . '/views/advertiser/dashboard.php';
+        $advertiserController = new \App\Controllers\AdvertiserDashboardController();
+        $advertiserController->showDashboard();
         break;
         
     case '/login':

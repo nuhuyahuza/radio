@@ -1,116 +1,223 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Station Manager Dashboard - Zaa Radio</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 d-md-block bg-dark sidebar collapse">
-                <div class="position-sticky pt-3">
-                    <div class="text-center mb-4">
-                        <i class="fas fa-radio fa-2x text-white"></i>
-                        <h5 class="text-white mt-2">Zaa Radio</h5>
-                    </div>
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="/manager">
-                                <i class="fas fa-tachometer-alt me-2"></i>
-                                Overview
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="/manager/slots">
-                                <i class="fas fa-clock me-2"></i>
-                                Manage Slots
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="/manager/bookings">
-                                <i class="fas fa-calendar-check me-2"></i>
-                                Approve Bookings
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="/manager/reports">
-                                <i class="fas fa-chart-bar me-2"></i>
-                                Reports
-                            </a>
-                        </li>
-                    </ul>
+<?php
+$pageTitle = 'Station Manager Dashboard';
+$currentPage = 'dashboard';
+ob_start();
+?>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">Welcome back, <?= htmlspecialchars($currentUser['name']) ?>!</h2>
+            <div class="text-muted">
+                <i class="fas fa-calendar-alt me-2"></i>
+                <?= date('l, F j, Y') ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-icon" style="background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stats-number"><?= $stats['pending_bookings'] ?? 0 ?></div>
+            <div class="stats-label">Pending Bookings</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-icon" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <i class="fas fa-calendar-check"></i>
+            </div>
+            <div class="stats-number"><?= $stats['todays_bookings'] ?? 0 ?></div>
+            <div class="stats-label">Today's Bookings</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+            <div class="stats-number"><?= $stats['available_slots'] ?? 0 ?></div>
+            <div class="stats-label">Available Slots</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-icon" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="stats-number">$<?= number_format($stats['monthly_revenue'] ?? 0, 0) ?></div>
+            <div class="stats-label">Monthly Revenue</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Pending Bookings -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-clock me-2"></i>
+                    Pending Bookings
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Advertiser</th>
+                                <th>Date & Time</th>
+                                <th>Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (!empty($pendingBookings)): ?>
+                                <?php foreach ($pendingBookings as $booking): ?>
+                                    <tr>
+                                        <td>#<?= $booking['id'] ?></td>
+                                        <td>
+                                            <div>
+                                                <div class="fw-bold"><?= htmlspecialchars($booking['advertiser_name']) ?></div>
+                                                <small class="text-muted"><?= htmlspecialchars($booking['advertiser_email']) ?></small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <div><?= date('M j, Y', strtotime($booking['date'])) ?></div>
+                                                <small class="text-muted">
+                                                    <?= date('g:i A', strtotime($booking['start_time'])) ?> - 
+                                                    <?= date('g:i A', strtotime($booking['end_time'])) ?>
+                                                </small>
+                                            </div>
+                                        </td>
+                                        <td class="fw-bold">$<?= number_format($booking['total_amount'], 2) ?></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="/manager/bookings/<?= $booking['id'] ?>/approve" 
+                                                   class="btn btn-sm btn-success" 
+                                                   onclick="return confirm('Approve this booking?')">
+                                                    <i class="fas fa-check"></i>
+                                                </a>
+                                                <a href="/manager/bookings/<?= $booking['id'] ?>/reject" 
+                                                   class="btn btn-sm btn-danger" 
+                                                   onclick="return confirm('Reject this booking?')">
+                                                    <i class="fas fa-times"></i>
+                                                </a>
+                                                <a href="/manager/bookings/<?= $booking['id'] ?>" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+                                        <div>No pending bookings</div>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-
-            <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">Station Manager Dashboard</h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle">
-                            <i class="fas fa-user me-1"></i>
-                            Manager User
-                        </button>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <h5 class="card-title mb-0">Pending Bookings</h5>
-                                <a href="/manager/bookings" class="btn btn-sm btn-outline-primary">View All</a>
-                            </div>
-                            <div class="card-body">
-                                <div class="text-center py-4">
-                                    <i class="fas fa-clock fa-3x text-muted mb-3"></i>
-                                    <p class="text-muted">No pending bookings at the moment.</p>
-                                    <a href="/manager/bookings" class="btn btn-primary">Manage Bookings</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">Today's Schedule</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="list-group">
-                                    <div class="list-group-item">
-                                        <div class="d-flex w-100 justify-content-between">
-                                            <h6 class="mb-1">Morning Drive</h6>
-                                            <small>6:00 AM - 9:00 AM</small>
-                                        </div>
-                                        <p class="mb-1">ABC Company - Product Launch</p>
-                                        <small class="text-success">Confirmed</small>
-                                    </div>
-                                    <div class="list-group-item">
-                                        <div class="d-flex w-100 justify-content-between">
-                                            <h6 class="mb-1">Midday</h6>
-                                            <small>12:00 PM - 2:00 PM</small>
-                                        </div>
-                                        <p class="mb-1">Available</p>
-                                        <small class="text-muted">No booking</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="alert alert-info mt-4">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Note:</strong> This is a placeholder manager dashboard. Full functionality will be implemented in upcoming todos.
-                </div>
-            </main>
+            <div class="card-footer text-center">
+                <a href="/manager/bookings" class="btn btn-primary">
+                    <i class="fas fa-list me-2"></i>
+                    Manage All Bookings
+                </a>
+            </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    <!-- Today's Schedule & Quick Actions -->
+    <div class="col-lg-4">
+        <!-- Today's Schedule -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-calendar-day me-2"></i>
+                    Today's Schedule
+                </h5>
+            </div>
+            <div class="card-body">
+                <?php if (!empty($todaysSchedule)): ?>
+                    <?php foreach ($todaysSchedule as $slot): ?>
+                        <div class="d-flex justify-content-between align-items-center mb-3 p-2 rounded" 
+                             style="background: <?= $slot['status'] === 'booked' ? '#e8f5e8' : '#f8f9fa' ?>">
+                            <div>
+                                <div class="fw-bold">
+                                    <?= date('g:i A', strtotime($slot['start_time'])) ?> - 
+                                    <?= date('g:i A', strtotime($slot['end_time'])) ?>
+                                </div>
+                                <?php if ($slot['status'] === 'booked'): ?>
+                                    <small class="text-muted">
+                                        <?= htmlspecialchars($slot['advertiser_name']) ?>
+                                    </small>
+                                <?php else: ?>
+                                    <small class="text-success">Available</small>
+                                <?php endif; ?>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold">$<?= number_format($slot['price'], 0) ?></div>
+                                <span class="badge <?= $slot['status'] === 'booked' ? 'badge-success' : 'badge-info' ?>">
+                                    <?= ucfirst($slot['status']) ?>
+                                </span>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-calendar-times fa-2x mb-2"></i>
+                        <div>No slots scheduled for today</div>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-bolt me-2"></i>
+                    Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/manager/slots/create" class="btn btn-outline-success">
+                        <i class="fas fa-plus me-2"></i>
+                        Create New Slot
+                    </a>
+                    <a href="/manager/slots" class="btn btn-outline-primary">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        Manage Slots
+                    </a>
+                    <a href="/manager/bookings" class="btn btn-outline-warning">
+                        <i class="fas fa-clipboard-list me-2"></i>
+                        Manage Bookings
+                    </a>
+                    <a href="/manager/reports" class="btn btn-outline-info">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        View Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php
+$content = ob_get_clean();
+include __DIR__ . '/../layouts/dashboard.php';
+?>

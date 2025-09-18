@@ -1,162 +1,235 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advertiser Dashboard - Zaa Radio</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 d-md-block bg-dark sidebar collapse">
-                <div class="position-sticky pt-3">
-                    <div class="text-center mb-4">
-                        <i class="fas fa-radio fa-2x text-white"></i>
-                        <h5 class="text-white mt-2">Zaa Radio</h5>
-                    </div>
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="/advertiser">
-                                <i class="fas fa-tachometer-alt me-2"></i>
-                                Overview
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="/book">
-                                <i class="fas fa-calendar-plus me-2"></i>
-                                Book New Slot
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="/advertiser/bookings">
-                                <i class="fas fa-calendar-check me-2"></i>
-                                My Bookings
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="/advertiser/profile">
-                                <i class="fas fa-user me-2"></i>
-                                Profile
-                            </a>
-                        </li>
-                    </ul>
+<?php
+$pageTitle = 'Advertiser Dashboard';
+$currentPage = 'dashboard';
+ob_start();
+?>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">Welcome back, <?= htmlspecialchars($currentUser['name']) ?>!</h2>
+            <div class="text-muted">
+                <i class="fas fa-calendar-alt me-2"></i>
+                <?= date('l, F j, Y') ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Book CTA -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <div class="card-body text-center py-5">
+                <h3 class="mb-3">
+                    <i class="fas fa-microphone me-2"></i>
+                    Ready to Reach Thousands of Listeners?
+                </h3>
+                <p class="mb-4 fs-5">Book your radio slot today and get your message heard!</p>
+                <a href="/book" class="btn btn-light btn-lg px-5">
+                    <i class="fas fa-calendar-plus me-2"></i>
+                    Book a Slot Now
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <div class="stats-number"><?= $stats['total_bookings'] ?? 0 ?></div>
+            <div class="stats-label">Total Bookings</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-icon" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stats-number"><?= $stats['approved_bookings'] ?? 0 ?></div>
+            <div class="stats-label">Approved Bookings</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-icon" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stats-number"><?= $stats['pending_bookings'] ?? 0 ?></div>
+            <div class="stats-label">Pending Bookings</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stats-card">
+            <div class="stats-icon" style="background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="stats-number">$<?= number_format($stats['total_spent'] ?? 0, 0) ?></div>
+            <div class="stats-label">Total Spent</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Bookings -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-clipboard-list me-2"></i>
+                    My Recent Bookings
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Date & Time</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (!empty($recentBookings)): ?>
+                                <?php foreach ($recentBookings as $booking): ?>
+                                    <tr>
+                                        <td>#<?= $booking['id'] ?></td>
+                                        <td>
+                                            <div>
+                                                <div class="fw-bold"><?= date('M j, Y', strtotime($booking['date'])) ?></div>
+                                                <small class="text-muted">
+                                                    <?= date('g:i A', strtotime($booking['start_time'])) ?> - 
+                                                    <?= date('g:i A', strtotime($booking['end_time'])) ?>
+                                                </small>
+                                            </div>
+                                        </td>
+                                        <td class="fw-bold">$<?= number_format($booking['total_amount'], 2) ?></td>
+                                        <td>
+                                            <?php
+                                            $statusClass = '';
+                                            switch ($booking['status']) {
+                                                case 'pending':
+                                                    $statusClass = 'badge-warning';
+                                                    break;
+                                                case 'approved':
+                                                    $statusClass = 'badge-success';
+                                                    break;
+                                                case 'rejected':
+                                                    $statusClass = 'badge-danger';
+                                                    break;
+                                                default:
+                                                    $statusClass = 'badge-info';
+                                            }
+                                            ?>
+                                            <span class="badge <?= $statusClass ?>">
+                                                <?= ucfirst($booking['status']) ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="/advertiser/bookings/<?= $booking['id'] ?>" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <i class="fas fa-calendar-plus fa-2x mb-2"></i>
+                                        <div>No bookings yet</div>
+                                        <small>Start by booking your first slot!</small>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-
-            <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">Advertiser Dashboard</h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        <a href="/book" class="btn btn-primary me-2">
-                            <i class="fas fa-plus me-1"></i>
-                            Book New Slot
-                        </a>
-                        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle">
-                            <i class="fas fa-user me-1"></i>
-                            Advertiser User
-                        </button>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="card text-white bg-primary mb-3">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h4 class="card-title">Total Bookings</h4>
-                                        <h2>5</h2>
-                                    </div>
-                                    <i class="fas fa-calendar-check fa-2x"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card text-white bg-success mb-3">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h4 class="card-title">Approved</h4>
-                                        <h2>3</h2>
-                                    </div>
-                                    <i class="fas fa-check-circle fa-2x"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card text-white bg-warning mb-3">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h4 class="card-title">Pending</h4>
-                                        <h2>2</h2>
-                                    </div>
-                                    <i class="fas fa-clock fa-2x"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">Recent Bookings</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Date</th>
-                                                <th>Time Slot</th>
-                                                <th>Status</th>
-                                                <th>Amount</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>2024-01-15</td>
-                                                <td>Morning Drive (6:00 AM - 9:00 AM)</td>
-                                                <td><span class="badge bg-success">Approved</span></td>
-                                                <td>$150.00</td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary">View</button>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>2024-01-20</td>
-                                                <td>Evening Rush (5:00 PM - 7:00 PM)</td>
-                                                <td><span class="badge bg-warning">Pending</span></td>
-                                                <td>$200.00</td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary">View</button>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="alert alert-info mt-4">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Note:</strong> This is a placeholder advertiser dashboard. Full functionality will be implemented in upcoming todos.
-                </div>
-            </main>
+            <div class="card-footer text-center">
+                <a href="/advertiser/bookings" class="btn btn-primary">
+                    <i class="fas fa-list me-2"></i>
+                    View All Bookings
+                </a>
+            </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    <!-- Quick Actions & Profile -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-bolt me-2"></i>
+                    Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/book" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>
+                        Book New Slot
+                    </a>
+                    <a href="/advertiser/bookings" class="btn btn-outline-primary">
+                        <i class="fas fa-clipboard-list me-2"></i>
+                        My Bookings
+                    </a>
+                    <a href="/advertiser/profile" class="btn btn-outline-secondary">
+                        <i class="fas fa-user me-2"></i>
+                        Edit Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-user me-2"></i>
+                    Profile Summary
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="user-avatar mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;">
+                        <?= strtoupper(substr($currentUser['name'], 0, 1)) ?>
+                    </div>
+                    <h6 class="mb-1"><?= htmlspecialchars($currentUser['name']) ?></h6>
+                    <small class="text-muted"><?= htmlspecialchars($currentUser['email']) ?></small>
+                </div>
+                
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="fw-bold fs-5"><?= $stats['total_bookings'] ?? 0 ?></div>
+                        <small class="text-muted">Bookings</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="fw-bold fs-5">$<?= number_format($stats['total_spent'] ?? 0, 0) ?></div>
+                        <small class="text-muted">Spent</small>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <a href="/advertiser/profile" class="btn btn-outline-primary btn-sm w-100">
+                        <i class="fas fa-edit me-2"></i>
+                        Edit Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php
+$content = ob_get_clean();
+include __DIR__ . '/../layouts/dashboard.php';
+?>

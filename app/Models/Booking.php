@@ -47,6 +47,163 @@ class Booking extends BaseModel
     }
 
     /**
+     * Count bookings by status
+     */
+    public function countByStatus($status)
+    {
+        $sql = "SELECT COUNT(*) as count FROM {$this->table} WHERE status = ?";
+        $result = $this->db->fetch($sql, [$status]);
+        return (int) $result['count'];
+    }
+
+    /**
+     * Count bookings by advertiser
+     */
+    public function countByAdvertiser($advertiserId)
+    {
+        $sql = "SELECT COUNT(*) as count FROM {$this->table} WHERE advertiser_id = ?";
+        $result = $this->db->fetch($sql, [$advertiserId]);
+        return (int) $result['count'];
+    }
+
+    /**
+     * Count bookings by advertiser and status
+     */
+    public function countByAdvertiserAndStatus($advertiserId, $status)
+    {
+        $sql = "SELECT COUNT(*) as count FROM {$this->table} WHERE advertiser_id = ? AND status = ?";
+        $result = $this->db->fetch($sql, [$advertiserId, $status]);
+        return (int) $result['count'];
+    }
+
+    /**
+     * Get total revenue
+     */
+    public function getTotalRevenue()
+    {
+        $sql = "SELECT SUM(total_amount) as total FROM {$this->table} WHERE status = 'approved'";
+        $result = $this->db->fetch($sql);
+        return (float) ($result['total'] ?? 0);
+    }
+
+    /**
+     * Get monthly revenue
+     */
+    public function getMonthlyRevenue()
+    {
+        $sql = "SELECT SUM(total_amount) as total FROM {$this->table} 
+                WHERE status = 'approved' 
+                AND MONTH(created_at) = MONTH(CURRENT_DATE()) 
+                AND YEAR(created_at) = YEAR(CURRENT_DATE())";
+        $result = $this->db->fetch($sql);
+        return (float) ($result['total'] ?? 0);
+    }
+
+    /**
+     * Count today's bookings
+     */
+    public function countTodaysBookings()
+    {
+        $sql = "SELECT COUNT(*) as count FROM {$this->table} b
+                JOIN slots s ON b.slot_id = s.id
+                WHERE s.date = CURDATE()";
+        $result = $this->db->fetch($sql);
+        return (int) $result['count'];
+    }
+
+    /**
+     * Get recent bookings with details
+     */
+    public function getRecentWithDetails($limit = 10)
+    {
+        $sql = "
+            SELECT 
+                b.*,
+                u.name as advertiser_name,
+                u.email as advertiser_email,
+                u.phone as advertiser_phone,
+                u.company as company_name,
+                s.date,
+                s.start_time,
+                s.end_time,
+                s.price,
+                st.name as station_name
+            FROM {$this->table} b
+            JOIN users u ON b.advertiser_id = u.id
+            JOIN slots s ON b.slot_id = s.id
+            JOIN stations st ON s.station_id = st.id
+            ORDER BY b.created_at DESC
+            LIMIT ?
+        ";
+        
+        return $this->db->fetchAll($sql, [$limit]);
+    }
+
+    /**
+     * Get bookings by status with details
+     */
+    public function getByStatusWithDetails($status, $limit = 10)
+    {
+        $sql = "
+            SELECT 
+                b.*,
+                u.name as advertiser_name,
+                u.email as advertiser_email,
+                u.phone as advertiser_phone,
+                u.company as company_name,
+                s.date,
+                s.start_time,
+                s.end_time,
+                s.price,
+                st.name as station_name
+            FROM {$this->table} b
+            JOIN users u ON b.advertiser_id = u.id
+            JOIN slots s ON b.slot_id = s.id
+            JOIN stations st ON s.station_id = st.id
+            WHERE b.status = ?
+            ORDER BY b.created_at DESC
+            LIMIT ?
+        ";
+        
+        return $this->db->fetchAll($sql, [$status, $limit]);
+    }
+
+    /**
+     * Get recent bookings by advertiser
+     */
+    public function getRecentByAdvertiser($advertiserId, $limit = 10)
+    {
+        $sql = "
+            SELECT 
+                b.*,
+                s.date,
+                s.start_time,
+                s.end_time,
+                s.price,
+                st.name as station_name
+            FROM {$this->table} b
+            JOIN slots s ON b.slot_id = s.id
+            JOIN stations st ON s.station_id = st.id
+            WHERE b.advertiser_id = ?
+            ORDER BY b.created_at DESC
+            LIMIT ?
+        ";
+        
+        return $this->db->fetchAll($sql, [$advertiserId, $limit]);
+    }
+
+    /**
+     * Get total spent by advertiser
+     */
+    public function getTotalSpentByAdvertiser($advertiserId)
+    {
+        $sql = "SELECT SUM(total_amount) as total FROM {$this->table} 
+                WHERE advertiser_id = ? AND status = 'approved'";
+        $result = $this->db->fetch($sql, [$advertiserId]);
+        return (float) ($result['total'] ?? 0);
+    }
+
+    /**
      * Find pending bookings
      */
     public function findPending()

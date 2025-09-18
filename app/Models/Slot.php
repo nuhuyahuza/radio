@@ -49,6 +49,37 @@ class Slot extends BaseModel
     }
 
     /**
+     * Count available slots
+     */
+    public function countAvailableSlots()
+    {
+        $sql = "SELECT COUNT(*) as count FROM {$this->table} WHERE status = 'available'";
+        $result = $this->db->fetch($sql);
+        return (int) $result['count'];
+    }
+
+    /**
+     * Get today's slots with bookings
+     */
+    public function getTodaysSlotsWithBookings()
+    {
+        $sql = "
+            SELECT 
+                s.*,
+                b.id as booking_id,
+                b.status as booking_status,
+                u.name as advertiser_name
+            FROM {$this->table} s
+            LEFT JOIN bookings b ON s.id = b.slot_id AND b.status = 'approved'
+            LEFT JOIN users u ON b.advertiser_id = u.id
+            WHERE s.date = CURDATE()
+            ORDER BY s.start_time
+        ";
+        
+        return $this->db->fetchAll($sql);
+    }
+
+    /**
      * Find slots for a specific date
      */
     public function findByDate($date, $stationId = null)
