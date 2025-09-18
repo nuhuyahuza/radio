@@ -260,8 +260,8 @@ class BookingController
             Session::set('booking_draft', null);
 
             Session::setFlash('success', 'Your booking has been submitted successfully!');
-            if ($this->isAjaxRequest()) { $this->jsonResponse(['success' => true, 'booking_id' => $bookingId, 'redirect' => "/booking-summary/$bookingId"], 200); }
-            header("Location: /booking-summary/$bookingId");
+            if ($this->isAjaxRequest()) { $this->jsonResponse(['success' => true, 'booking_id' => $bookingId, 'redirect' => "/"], 200); }
+            header("Location: /");
             exit;
         } catch (\Exception $e) {
             $this->db->rollback();

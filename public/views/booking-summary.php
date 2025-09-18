@@ -25,11 +25,33 @@ $hasServerDraft = isset($booking) && empty($booking['id']);
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark" style="background: rgba(0,0,0,0.1)">
+    <?php 
+        $user = Session::get('user');
+        $role = $user['role'] ?? null;
+        $dashboardUrl = $role === 'admin' ? '/admin' : ($role === 'manager' ? '/manager' : ($role === 'advertiser' ? '/advertiser' : null));
+    ?>
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top" style="background: rgba(0,0,0,0.2)">
         <div class="container">
             <a class="navbar-brand" href="/"><i class="fas fa-radio me-2"></i><strong>Zaa Radio</strong></a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="/book">Book</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="mainNav">
+                <ul class="navbar-nav ms-auto align-items-lg-center">
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/book">Book</a></li>
+                    <?php if ($dashboardUrl): ?>
+                        <li class="nav-item"><a class="nav-link" href="<?= $dashboardUrl ?>">Dashboard</a></li>
+                        <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
+                            <form method="POST" action="/logout" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="<?= Session::getCsrfToken() ?>">
+                                <button class="btn btn-sm btn-light text-dark">Logout</button>
+                            </form>
+                        </li>
+                    <?php else: ?>
+                        <li class="nav-item"><a class="nav-link" href="/login">Login</a></li>
+                    <?php endif; ?>
+                </ul>
             </div>
         </div>
     </nav>
@@ -181,7 +203,7 @@ $hasServerDraft = isset($booking) && empty($booking['id']);
                                 const data = await resp.json();
                                 if (data.success) {
                                     showAlert('Booking submitted successfully. Redirecting...', 'success');
-                                    setTimeout(() => { window.location.href = data.redirect || `/booking-summary/${data.booking_id}`; }, 900);
+                                    setTimeout(() => { window.location.href = data.redirect || '/'; }, 900);
                                 } else {
                                     showAlert(data.message || 'Confirmation failed. Please try again.', 'error');
                                 }
@@ -189,7 +211,7 @@ $hasServerDraft = isset($booking) && empty($booking['id']);
                             }
                             // Handle server redirect manually (302/303)
                             if (resp.status === 302 || resp.status === 303) {
-                                const loc = resp.headers.get('Location') || resp.headers.get('location');
+                                const loc = resp.headers.get('Location') || resp.headers.get('location') || '/';
                                 if (loc) {
                                     showAlert('Booking submitted successfully. Redirecting...', 'success');
                                     setTimeout(() => { window.location.href = loc; }, 900);

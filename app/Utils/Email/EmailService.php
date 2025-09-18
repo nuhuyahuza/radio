@@ -32,18 +32,49 @@ class EmailService
     {
         try {
             // Server settings
-            $this->mailer->isSMTP();
-            $this->mailer->Host = $_ENV['MAIL_HOST'] ?? 'smtp.gmail.com';
-            $this->mailer->SMTPAuth = true;
-            $this->mailer->Username = $_ENV['MAIL_USERNAME'] ?? '';
-            $this->mailer->Password = $_ENV['MAIL_PASSWORD'] ?? '';
-            $this->mailer->SMTPSecure = $_ENV['MAIL_ENCRYPTION'] ?? 'tls';
-            $this->mailer->Port = $_ENV['MAIL_PORT'] ?? 587;
+            $host = $_ENV['MAIL_HOST'] ?? '';
+            $username = $_ENV['MAIL_USERNAME'] ?? '';
+            $password = $_ENV['MAIL_PASSWORD'] ?? '';
+            $encryption = $_ENV['MAIL_ENCRYPTION'] ?? 'tls';
+            $port = (int)($_ENV['MAIL_PORT'] ?? 587);
+
+            if (!empty($host) && !empty($username) && !empty($password)) {
+                $this->mailer->isSMTP();
+                $this->mailer->Host = $host;
+                $this->mailer->SMTPAuth = true;
+                $this->mailer->Username = $username;
+                $this->mailer->Password = $password;
+                $this->mailer->SMTPSecure = $encryption;
+                $this->mailer->Port = $port;
+                // Allow self-signed certs in dev
+                $this->mailer->SMTPOptions = [
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true,
+                    ]
+                ];
+            } else {
+                // Fallback to PHP mail() if SMTP not configured
+                $this->mailer->isMail();
+            }
 
             // Recipients
             $this->mailer->setFrom($this->fromEmail, $this->fromName);
             $this->mailer->isHTML(true);
             $this->mailer->CharSet = 'UTF-8';
+
+            // Optional debug logging
+            $debug = (int)($_ENV['MAIL_DEBUG'] ?? 0);
+            if ($debug > 0) {
+                $this->mailer->SMTPDebug = \PHPMailer\PHPMailer\SMTP::DEBUG_SERVER;
+                $logDir = dirname(__DIR__, 2) . '/storage/logs';
+                if (!is_dir($logDir)) { @mkdir($logDir, 0775, true); }
+                $logFile = $logDir . '/mail.log';
+                $this->mailer->Debugoutput = function ($str, $level) use ($logFile) {
+                    @file_put_contents($logFile, '[' . date('c') . "] level=$level " . $str . "\n", FILE_APPEND);
+                };
+            }
 
         } catch (MailerException $e) {
             error_log("Email configuration error: " . $e->getMessage());
