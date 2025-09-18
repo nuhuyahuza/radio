@@ -20,6 +20,8 @@ $hasServerDraft = isset($booking) && empty($booking['id']);
         .status-badge { font-size: 1.1rem; padding: 12px 24px; border-radius: 50px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
         .status-draft { background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); color: white; }
         .status-confirmed { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; }
+        .alert-card { border: none; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); }
+        .alert-card .icon { font-size: 1.2rem; margin-right: 8px; }
     </style>
 </head>
 <body>
@@ -37,6 +39,7 @@ $hasServerDraft = isset($booking) && empty($booking['id']);
             <div class="row justify-content-center">
                 <div class="col-lg-8">
                     <div class="summary-card p-5">
+                        <div id="alertContainer" class="mb-3" style="display:none"></div>
                         <div class="text-center mb-4">
                             <span class="status-badge status-draft">
                                 <i class="fas fa-clock me-2"></i>
@@ -99,7 +102,32 @@ $hasServerDraft = isset($booking) && empty($booking['id']);
         (function() {
             const content = document.getElementById('draftContent');
             const empty = document.getElementById('noDraft');
+            const alertContainer = document.getElementById('alertContainer');
+            const csrfInput = document.querySelector('input[name="csrf_token"]');
+            function getCookie(name) {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+                return '';
+            }
+            function showAlert(message, type) {
+                const typeMap = { success: 'success', error: 'danger', info: 'info', warning: 'warning' };
+                const bsType = typeMap[type] || 'info';
+                alertContainer.style.display = 'block';
+                alertContainer.innerHTML = `
+                    <div class="alert alert-${bsType} alert-card d-flex align-items-start" role="alert">
+                        <i class="icon fas ${bsType==='success'?'fa-check-circle':bsType==='danger'?'fa-exclamation-triangle':bsType==='warning'?'fa-exclamation-circle':'fa-info-circle'} mt-1"></i>
+                        <div>${message}</div>
+                    </div>
+                `;
+            }
             try {
+                // Refresh CSRF token from server to avoid stale token
+                fetch('/api/csrf-token', { credentials: 'same-origin' })
+                    .then(r => r.json())
+                    .then(data => { if (data && data.token && csrfInput) csrfInput.value = data.token; })
+                    .catch(() => {});
+
                 const raw = sessionStorage.getItem('booking_draft');
                 if (!raw) { content.style.display = 'none'; empty.style.display = 'block'; return; }
                 const draft = JSON.parse(raw);
@@ -124,6 +152,63 @@ $hasServerDraft = isset($booking) && empty($booking['id']);
                 document.getElementById('draftPayload').value = raw;
                 content.style.display = 'block';
                 empty.style.display = 'none';
+
+                // Attach submit handler to ensure payload is posted and redirect followed
+                const form = document.getElementById('confirmForm');
+                if (form) {
+                    form.addEventListener('submit', async function(e) {
+                        e.preventDefault();
+                        // Refresh payload from sessionStorage in case of changes
+                        const latestRaw = sessionStorage.getItem('booking_draft');
+                        if (latestRaw) {
+                            document.getElementById('draftPayload').value = latestRaw;
+                        }
+                        const formData = new FormData(form);
+                        showAlert('Submitting your booking...', 'info');
+                        try {
+                            const resp = await fetch('/booking/confirm', {
+                                method: 'POST',
+                                body: formData,
+                                credentials: 'same-origin',
+                                redirect: 'manual',
+                                headers: { 
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-Token': getCookie('XSRF-TOKEN') || (csrfInput ? csrfInput.value : '')
+                                }
+                            });
+                            const contentType = resp.headers.get('content-type') || '';
+                            if (contentType.includes('application/json')) {
+                                const data = await resp.json();
+                                if (data.success) {
+                                    showAlert('Booking submitted successfully. Redirecting...', 'success');
+                                    setTimeout(() => { window.location.href = data.redirect || `/booking-summary/${data.booking_id}`; }, 900);
+                                } else {
+                                    showAlert(data.message || 'Confirmation failed. Please try again.', 'error');
+                                }
+                                return;
+                            }
+                            // Handle server redirect manually (302/303)
+                            if (resp.status === 302 || resp.status === 303) {
+                                const loc = resp.headers.get('Location') || resp.headers.get('location');
+                                if (loc) {
+                                    showAlert('Booking submitted successfully. Redirecting...', 'success');
+                                    setTimeout(() => { window.location.href = loc; }, 900);
+                                    return;
+                                }
+                            }
+                            const text = await resp.text();
+                            if (!resp.ok) {
+                                showAlert('Confirmation failed. Please review and try again.', 'error');
+                                return;
+                            }
+                            document.open();
+                            document.write(text);
+                            document.close();
+                        } catch (err) {
+                            showAlert('Failed to confirm booking. Please try again.', 'error');
+                        }
+                    });
+                }
             } catch (e) {
                 content.style.display = 'none';
                 empty.style.display = 'block';

@@ -177,7 +177,10 @@ class BookingController
         \App\Utils\Session::start();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') { $this->redirectToBooking(); return; }
         $csrfToken = $_POST['csrf_token'] ?? '';
-        if (!Session::verifyCsrfToken($csrfToken)) { Session::setFlash('error', 'Invalid security token. Please try again.'); $this->redirectToBooking(); return; }
+        if (!Session::verifyCsrfToken($csrfToken)) {
+            if ($this->isAjaxRequest()) { $this->jsonResponse(['success' => false, 'message' => 'Invalid security token. Please try again.'], 400); return; }
+            Session::setFlash('error', 'Invalid security token. Please try again.'); $this->redirectToBooking(); return;
+        }
 
         // Prefer client-provided draft (from sessionStorage)
         $clientPayload = $_POST['draft_payload'] ?? '';
@@ -186,13 +189,17 @@ class BookingController
             catch (\Throwable $e) { $draft = null; }
         }
         if (empty($draft)) { $draft = Session::get('booking_draft'); }
-        if (!$draft) { Session::setFlash('error', 'No booking draft found.'); $this->redirectToBooking(); return; }
+        if (!$draft) {
+            if ($this->isAjaxRequest()) { $this->jsonResponse(['success' => false, 'message' => 'No booking draft found.'], 400); return; }
+            Session::setFlash('error', 'No booking draft found.'); $this->redirectToBooking(); return;
+        }
 
         // Minimal validation
         $slotId = (int)($draft['slot']['id'] ?? 0);
-        if (!$slotId) { Session::setFlash('error', 'Invalid slot.'); $this->redirectToBooking(); return; }
+        if (!$slotId) { if ($this->isAjaxRequest()) { $this->jsonResponse(['success' => false, 'message' => 'Invalid slot.'], 400); return; } Session::setFlash('error', 'Invalid slot.'); $this->redirectToBooking(); return; }
         $slot = $this->slotModel->find($slotId);
         if (!$slot || $slot['status'] !== 'available' || $this->bookingModel->isSlotBooked($slotId)) {
+            if ($this->isAjaxRequest()) { $this->jsonResponse(['success' => false, 'message' => 'Selected slot is no longer available.'], 409); return; }
             Session::setFlash('error', 'Selected slot is no longer available.');
             $this->redirectToBooking();
             return;
@@ -253,10 +260,12 @@ class BookingController
             Session::set('booking_draft', null);
 
             Session::setFlash('success', 'Your booking has been submitted successfully!');
+            if ($this->isAjaxRequest()) { $this->jsonResponse(['success' => true, 'booking_id' => $bookingId, 'redirect' => "/booking-summary/$bookingId"], 200); }
             header("Location: /booking-summary/$bookingId");
             exit;
         } catch (\Exception $e) {
             $this->db->rollback();
+            if ($this->isAjaxRequest()) { $this->jsonResponse(['success' => false, 'message' => 'Confirmation failed: ' . $e->getMessage()], 500); return; }
             Session::setFlash('error', 'Confirmation failed: ' . $e->getMessage());
             header('Location: /booking-summary');
             exit;
