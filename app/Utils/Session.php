@@ -16,8 +16,9 @@ class Session
         if (session_status() === PHP_SESSION_NONE) {
             // Configure session security
             ini_set('session.cookie_httponly', 1);
-            ini_set('session.cookie_secure', isset($_SERVER['HTTPS']));
+            ini_set('session.cookie_secure', 0); // Set to 0 for HTTP in development
             ini_set('session.use_strict_mode', 1);
+            ini_set('session.cookie_samesite', 'Lax'); // Allow cross-site requests
             
             session_start();
         }
@@ -73,8 +74,9 @@ class Session
      */
     public static function destroy()
     {
-        self::start();
-        session_destroy();
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_destroy();
+        }
     }
 
     /**

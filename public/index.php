@@ -71,7 +71,11 @@ switch ($path) {
         
     case '/login':
         $authController = new AuthController();
-        $authController->showLogin();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $authController->login();
+        } else {
+            $authController->showLogin();
+        }
         break;
         
     case '/logout':

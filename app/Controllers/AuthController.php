@@ -114,7 +114,8 @@ class AuthController
         Session::setUser($user);
 
         // Log activity
-        \App\Middleware\AuthMiddleware::logActivity('login', "User logged in from {$_SERVER['REMOTE_ADDR']}");
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        \App\Middleware\AuthMiddleware::logActivity('login', "User logged in from $ip");
 
         // Redirect to intended page or dashboard
         $redirectUrl = Session::getFlash('redirect_after_login');

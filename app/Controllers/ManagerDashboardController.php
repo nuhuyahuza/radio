@@ -31,11 +31,7 @@ class ManagerDashboardController
     public function showDashboard()
     {
         // Check if user is station manager
-        if (!AuthMiddleware::checkRole('station_manager')) {
-            Session::setFlash('error', 'Access denied. Station manager privileges required.');
-            header('Location: /login');
-            exit;
-        }
+        AuthMiddleware::requireRole('station_manager');
 
         $currentUser = Session::get('user');
         

@@ -28,11 +28,7 @@ class AdvertiserDashboardController
     public function showDashboard()
     {
         // Check if user is advertiser
-        if (!AuthMiddleware::checkRole('advertiser')) {
-            Session::setFlash('error', 'Access denied. Advertiser privileges required.');
-            header('Location: /login');
-            exit;
-        }
+        AuthMiddleware::requireRole('advertiser');
 
         $currentUser = Session::get('user');
         

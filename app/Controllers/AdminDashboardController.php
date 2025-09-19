@@ -31,11 +31,7 @@ class AdminDashboardController
     public function showDashboard()
     {
         // Check if user is admin
-        if (!AuthMiddleware::checkRole('admin')) {
-            Session::setFlash('error', 'Access denied. Admin privileges required.');
-            header('Location: /login');
-            exit;
-        }
+        AuthMiddleware::requireRole('admin');
 
         $currentUser = Session::get('user');
         

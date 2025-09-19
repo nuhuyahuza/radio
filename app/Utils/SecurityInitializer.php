@@ -125,11 +125,10 @@ class SecurityInitializer
         if (!is_dir($sessionPath)) {
             @mkdir($sessionPath, 0775, true);
         }
-        if (is_dir($sessionPath) && is_writable($sessionPath)) {
-            ini_set('session.save_path', $sessionPath);
-        }
-
         if (session_status() === PHP_SESSION_NONE) {
+            if (is_dir($sessionPath) && is_writable($sessionPath)) {
+                ini_set('session.save_path', $sessionPath);
+            }
             ini_set('session.cookie_httponly', $httponly);
             ini_set('session.cookie_secure', $secure);
             ini_set('session.use_strict_mode', $strictMode);
