@@ -272,7 +272,7 @@ use App\Utils\Session;
 										</td>
 										<td>
 											<strong
-												class="text-success">$<?= number_format($booking['total_amount'], 2) ?></strong>
+												class="text-success">GH₵<?= number_format($booking['total_amount'], 2) ?></strong>
 										</td>
 										<td>
 											<span

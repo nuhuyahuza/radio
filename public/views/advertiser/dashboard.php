@@ -69,7 +69,7 @@ ob_start();
             <div class="stats-icon" style="background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);">
                 <i class="fas fa-dollar-sign"></i>
             </div>
-            <div class="stats-number">$<?= number_format($stats['total_spent'] ?? 0, 0) ?></div>
+            <div class="stats-number">GH₵<?= number_format($stats['total_spent'] ?? 0, 0) ?></div>
             <div class="stats-label">Total Spent</div>
         </div>
     </div>
@@ -111,7 +111,7 @@ ob_start();
                                                 </small>
                                             </div>
                                         </td>
-                                        <td class="fw-bold">$<?= number_format($booking['total_amount'], 2) ?></td>
+                                        <td class="fw-bold">GH₵<?= number_format($booking['total_amount'], 2) ?></td>
                                         <td>
                                             <?php
                                             $statusClass = '';
@@ -213,7 +213,7 @@ ob_start();
                         <small class="text-muted">Bookings</small>
                     </div>
                     <div class="col-6">
-                        <div class="fw-bold fs-5">$<?= number_format($stats['total_spent'] ?? 0, 0) ?></div>
+                        <div class="fw-bold fs-5">GH₵<?= number_format($stats['total_spent'] ?? 0, 0) ?></div>
                         <small class="text-muted">Spent</small>
                     </div>
                 </div>

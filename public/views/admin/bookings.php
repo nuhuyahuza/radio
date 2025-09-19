@@ -374,10 +374,10 @@ ob_start();
 						<label class="form-label fw-semibold">Amount Range</label>
 						<select class="form-select" id="amountFilter" onchange="filterBookings()">
 							<option value="">All Amounts</option>
-							<option value="0-100">$0 - $100</option>
-							<option value="100-500">$100 - $500</option>
-							<option value="500-1000">$500 - $1,000</option>
-							<option value="1000+">$1,000+</option>
+							<option value="0-100">GH₵0 - GH₵100</option>
+							<option value="100-500">GH₵100 - GH₵500</option>
+							<option value="500-1000">GH₵500 - GH₵1,000</option>
+							<option value="1000+">GH₵1,000+</option>
 						</select>
 					</div>
 				</div>
@@ -410,6 +410,7 @@ ob_start();
 					<table class="table table-hover mb-0 fade-in" id="bookingsTable">
 						<thead class="table-light">
 							<tr>
+								<th></th>
 								<th class="text-center align-middle" style="width:50px;">
 									<input type="checkbox" class="form-check-input" id="selectAll"
 										onchange="toggleSelectAll()">
@@ -712,7 +713,7 @@ function renderBookings(bookings) {
                 </span>
             </td>
             <td class="align-middle text-end">
-                <span class="fw-bold text-success h6 mb-0">$${formatAmount(booking.total_amount)}</span>
+                <span class="fw-bold text-success h6 mb-0">${formatAmount(booking.total_amount)}</span>
             </td>
             <td class="align-middle text-center">${getStatusBadge(booking.status)}</td>
             <td class="align-middle">
@@ -1133,7 +1134,7 @@ function getStatusBadge(status) {
 		'rejected': '<span class="chip bg-danger"><span class="status-indicator rejected"></span>Rejected</span>',
 		'cancelled': '<span class="chip bg-secondary"><span class="status-indicator cancelled"></span>Cancelled</span>'
 	};
-	return badges[status] || `<span class="chip bg-info"><span class="status-indicator"></span>${status}</span>`;
+	return badges[status] || `<span class="chip bg-info"><span class="status-indicator"></span>GH₵{status}</span>`;
 }
 
 function escapeHtml(text) {
@@ -1196,11 +1197,11 @@ function showConfirmDialog(title, message, type = 'primary', onConfirm) {
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">${title}</h5>
+                    <h5 class="modal-title">GH₵{title}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>${message}</p>
+                    <p>GH₵{message}</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

@@ -172,7 +172,7 @@ use App\Utils\Session;
                                     <tr>
                                         <td><?= date('M j, Y', strtotime($slot['date'])) ?></td>
                                         <td><?= date('g:i A', strtotime($slot['start_time'])) ?> - <?= date('g:i A', strtotime($slot['end_time'])) ?></td>
-                                        <td>$<?= number_format($slot['price'], 2) ?></td>
+                                        <td>GH₵<?= number_format($slot['price'], 2) ?></td>
                                         <td>
                                             <span class="badge bg-<?= $slot['status'] === 'available' ? 'success' : ($slot['status'] === 'booked' ? 'danger' : 'secondary') ?>">
                                                 <?= ucfirst($slot['status']) ?>

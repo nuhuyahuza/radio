@@ -224,7 +224,7 @@ class EmailService
             $this->mailer->addAddress($toEmail, $toName);
             $this->mailer->Subject = 'Payment Reminder - Zaa Radio';
 
-            $amount = '$' . number_format($bookingData['total_amount'], 2);
+            $amount = 'GH₵' . number_format($bookingData['total_amount'], 2);
             $date = date('F j, Y', strtotime($bookingData['date']));
             $template = "<p>Dear " . htmlspecialchars($toName) . ",</p>"
                       . "<p>This is a friendly reminder to complete your payment of <strong>{$amount}</strong> for the booking scheduled on <strong>{$date}</strong>.</p>"
@@ -246,7 +246,7 @@ class EmailService
     {
         $date = date('F j, Y', strtotime($bookingData['date']));
         $time = date('g:i A', strtotime($bookingData['start_time'])) . ' - ' . date('g:i A', strtotime($bookingData['end_time']));
-        $amount = '$' . number_format($bookingData['total_amount'], 2);
+        $amount = 'GH₵' . number_format($bookingData['total_amount'], 2);
 
         return "
         <!DOCTYPE html>

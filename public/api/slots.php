@@ -48,7 +48,7 @@ try {
         
         // Add price to title if available
         if ($slot['price'] > 0) {
-            $title .= ' ($' . number_format($slot['price'], 0) . ')';
+            $title .= ' (GH₵' . number_format($slot['price'], 0) . ')';
         }
         
         $calendarSlots[] = [

@@ -158,7 +158,7 @@ ob_start();
                         <div class="col-md-6">
                             <label for="slotPrice" class="form-label">Price <span class="text-danger">*</span></label>
                             <div class="input-group">
-                                <span class="input-group-text">$</span>
+                                <span class="input-group-text">GH₵</span>
                                 <input type="number" class="form-control" id="slotPrice" step="0.01" min="0" required>
                             </div>
                         </div>
@@ -223,7 +223,7 @@ ob_start();
                         <div class="col-md-6">
                             <label for="genPrice" class="form-label">Default Price <span class="text-danger">*</span></label>
                             <div class="input-group">
-                                <span class="input-group-text">$</span>
+                                <span class="input-group-text">GH₵</span>
                                 <input type="number" class="form-control" id="genPrice" step="0.01" min="0" required>
                             </div>
                         </div>
@@ -335,21 +335,21 @@ function renderSlots(slots) {
             <td>
                 <input type="checkbox" class="form-check-input slot-checkbox" value="${slot.id}" onchange="toggleSlotSelection(${slot.id})">
             </td>
-            <td>${formatDate(slot.date)}</td>
+            <td>GH₵{formatDate(slot.date)}</td>
             <td>
                 <div>
-                    <div class="fw-bold">${formatTime(slot.start_time)}</div>
+                    <div class="fw-bold">GH₵{formatTime(slot.start_time)}</div>
                     <small class="text-muted">to ${formatTime(slot.end_time)}</small>
                 </div>
             </td>
-            <td>${slot.duration} min</td>
-            <td class="fw-bold">$${formatAmount(slot.price)}</td>
-            <td>${getStatusBadge(slot.status)}</td>
+            <td>GH₵{slot.duration} min</td>
+            <td class="fw-bold">GH₵${formatAmount(slot.price)}</td>
+            <td>GH₵{getStatusBadge(slot.status)}</td>
             <td>
                 ${slot.booked_by ? `
                     <div>
-                        <div class="fw-bold">${slot.booked_by.name}</div>
-                        <small class="text-muted">${slot.booked_by.email}</small>
+                        <div class="fw-bold">GH₵{slot.booked_by.name}</div>
+                        <small class="text-muted">GH₵{slot.booked_by.email}</small>
                     </div>
                 ` : '<span class="text-muted">-</span>'}
             </td>
@@ -399,7 +399,7 @@ function updateCalendar() {
     // Days of week header
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     dayNames.forEach(day => {
-        calendarHTML += `<div class="calendar-day-header">${day}</div>`;
+        calendarHTML += `<div class="calendar-day-header">GH₵{day}</div>`;
     });
     
     // Empty cells for days before month starts
@@ -412,7 +412,7 @@ function updateCalendar() {
         const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         calendarHTML += `
             <div class="calendar-day" data-date="${dateStr}" onclick="showDaySlots('${dateStr}')">
-                <div class="day-number">${day}</div>
+                <div class="day-number">GH₵{day}</div>
                 <div class="day-slots" id="slots-${dateStr}"></div>
             </div>
         `;

@@ -7,6 +7,12 @@
 use App\Utils\Session;
 ?>
 
+<?php
+$pageTitle = 'User Details';
+$currentPage = 'users';
+ob_start();
+?>
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
@@ -195,4 +201,9 @@ use App\Utils\Session;
         </div>
     </div>
 </div>
+
+<?php
+$content = ob_get_clean();
+include __DIR__ . '/../layouts/dashboard.php';
+?>
 

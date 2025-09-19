@@ -60,7 +60,7 @@ use App\Utils\Session;
                                     </div>
                                     <div class="col-md-6">
                                         <h6>Total Amount</h6>
-                                        <p class="text-muted">$<?= number_format($booking['total_amount'], 2) ?></p>
+                                        <p class="text-muted">GH₵<?= number_format($booking['total_amount'], 2) ?></p>
                                         
                                         <h6>Created At</h6>
                                         <p class="text-muted"><?= date('F j, Y g:i A', strtotime($booking['created_at'])) ?></p>

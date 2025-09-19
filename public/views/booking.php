@@ -521,7 +521,7 @@ use App\Utils\Session;
                         </small>
                     </div>
                     <div class="text-end">
-                        <div class="h5 text-primary mb-0">$${selectedSlot.price}</div>
+                        <div class="h5 text-primary mb-0">GH₵${selectedSlot.price}</div>
                         <small class="text-muted">
                             ${start.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})} - 
                             ${end.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}
