@@ -180,7 +180,11 @@ switch ($path) {
         
     case '/admin/users/create':
         $userManagementController = new \App\Controllers\UserManagementController();
-        $userManagementController->showCreateUser();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $userManagementController->createUser();
+        } else {
+            $userManagementController->showCreateUser();
+        }
         break;
         
     case (preg_match('/^\/admin\/users\/edit\/(\d+)$/', $path, $matches) ? true : false):

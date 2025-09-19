@@ -220,5 +220,5 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
-include __DIR__ . '/../layouts/dashboard.php';
+include __DIR__ . '/../layouts/manager-dashboard.php';
 ?>

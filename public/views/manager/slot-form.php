@@ -3,96 +3,23 @@ use App\Utils\Session;
 
 $isEdit = isset($slot) && $slot;
 $pageTitle = $isEdit ? 'Edit Slot' : 'Create New Slot';
+$currentPage = 'slots';
 $formAction = $isEdit ? "/manager/slots/edit/{$slot['id']}" : '/manager/slots/create';
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $pageTitle ?> - Zaa Radio</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .form-container {
-            min-height: 100vh;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        }
-        .form-card {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        }
-    </style>
-</head>
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 d-md-block bg-dark sidebar collapse">
-                <div class="position-sticky pt-3">
-                    <div class="text-center mb-4">
-                        <i class="fas fa-radio fa-2x text-white"></i>
-                        <h5 class="text-white mt-2">Zaa Radio</h5>
-                    </div>
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="/manager">
-                                <i class="fas fa-tachometer-alt me-2"></i>
-                                Overview
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="/manager/slots">
-                                <i class="fas fa-clock me-2"></i>
-                                Manage Slots
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="/manager/bookings">
-                                <i class="fas fa-calendar-check me-2"></i>
-                                Approve Bookings
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-white" href="/manager/reports">
-                                <i class="fas fa-chart-bar me-2"></i>
-                                Reports
-                            </a>
-                        </li>
-                    </ul>
-                </div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-calendar-plus me-2"></i>
+                    <?= $pageTitle ?>
+                </h5>
             </div>
-
-            <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2"><?= $pageTitle ?></h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        <a href="/manager/slots" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-left me-2"></i>
-                            Back to Slots
-                        </a>
-                    </div>
-                </div>
-
-                <?php if (Session::hasFlash('error')): ?>
-                    <div class="alert alert-danger">
-                        <?= htmlspecialchars(Session::getFlash('error')) ?>
-                    </div>
-                <?php endif; ?>
-
-                <?php if (Session::hasFlash('success')): ?>
-                    <div class="alert alert-success">
-                        <?= htmlspecialchars(Session::getFlash('success')) ?>
-                    </div>
-                <?php endif; ?>
-
-                <div class="row justify-content-center">
-                    <div class="col-lg-8">
-                        <div class="form-card p-4">
-                            <form method="POST" action="<?= $formAction ?>">
-                                <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
+            <div class="card-body">
+                <form method="POST" action="<?= $formAction ?>">
+                    <input type="hidden" name="csrf_token" value="<?= \App\Utils\Session::getCsrfToken() ?>">
                                 
                                 <div class="row">
                                     <div class="col-md-6">
@@ -155,65 +82,65 @@ $formAction = $isEdit ? "/manager/slots/edit/{$slot['id']}" : '/manager/slots/cr
                                               placeholder="Optional description for this slot..."><?= $isEdit ? htmlspecialchars($slot['description']) : '' ?></textarea>
                                 </div>
 
-                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                    <a href="/manager/slots" class="btn btn-secondary me-md-2">Cancel</a>
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-save me-2"></i>
-                                        <?= $isEdit ? 'Update Slot' : 'Create Slot' ?>
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="/manager/slots" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            <?= $isEdit ? 'Update Slot' : 'Create Slot' ?>
+                        </button>
                     </div>
-                </div>
-            </main>
+                </form>
+            </div>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const startTimeInput = document.getElementById('start_time');
-            const endTimeInput = document.getElementById('end_time');
-            const durationInput = document.getElementById('duration');
+<?php
+$content = ob_get_clean();
+include __DIR__ . '/../layouts/manager-dashboard.php';
+?>
 
-            function calculateDuration() {
-                const startTime = startTimeInput.value;
-                const endTime = endTimeInput.value;
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const startTimeInput = document.getElementById('start_time');
+        const endTimeInput = document.getElementById('end_time');
+        const durationInput = document.getElementById('duration');
+
+        function calculateDuration() {
+            const startTime = startTimeInput.value;
+            const endTime = endTimeInput.value;
+            
+            if (startTime && endTime) {
+                const start = new Date('2000-01-01 ' + startTime);
+                const end = new Date('2000-01-01 ' + endTime);
                 
-                if (startTime && endTime) {
-                    const start = new Date('2000-01-01 ' + startTime);
-                    const end = new Date('2000-01-01 ' + endTime);
+                if (end > start) {
+                    const diffMs = end - start;
+                    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
                     
-                    if (end > start) {
-                        const diffMs = end - start;
-                        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                        const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                        
-                        if (diffHours > 0) {
-                            durationInput.value = diffHours + 'h ' + diffMinutes + 'm';
-                        } else {
-                            durationInput.value = diffMinutes + ' minutes';
-                        }
+                    if (diffHours > 0) {
+                        durationInput.value = diffHours + 'h ' + diffMinutes + 'm';
                     } else {
-                        durationInput.value = 'Invalid time range';
+                        durationInput.value = diffMinutes + ' minutes';
                     }
                 } else {
-                    durationInput.value = '';
+                    durationInput.value = 'Invalid time range';
                 }
+            } else {
+                durationInput.value = '';
             }
+        }
 
-            startTimeInput.addEventListener('change', calculateDuration);
-            endTimeInput.addEventListener('change', calculateDuration);
+        startTimeInput.addEventListener('change', calculateDuration);
+        endTimeInput.addEventListener('change', calculateDuration);
 
-            // Calculate initial duration if editing
-            calculateDuration();
+        // Calculate initial duration if editing
+        calculateDuration();
 
-            // Set minimum date to today
-            const dateInput = document.getElementById('date');
-            const today = new Date().toISOString().split('T')[0];
-            dateInput.min = today;
-        });
-    </script>
-</body>
-</html>
+        // Set minimum date to today
+        const dateInput = document.getElementById('date');
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.min = today;
+    });
+</script>

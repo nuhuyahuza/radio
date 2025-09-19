@@ -35,7 +35,7 @@ class UserManagementController
      */
     public function showUserDetails($userId)
     {
-        $user = $this->userModel->findById($userId);
+        $user = $this->userModel->find($userId);
         if (!$user) {
             Session::setFlash('error', 'User not found.');
             header('Location: /admin/users');
@@ -58,7 +58,7 @@ class UserManagementController
      */
     public function showEditUser($userId)
     {
-        $user = $this->userModel->findById($userId);
+        $user = $this->userModel->find($userId);
         if (!$user) {
             Session::setFlash('error', 'User not found.');
             header('Location: /admin/users');
@@ -73,14 +73,21 @@ class UserManagementController
      */
     public function createUser()
     {
+        error_log("UserManagementController::createUser called");
         Session::start();
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            error_log("POST request received for user creation");
             // CSRF protection
-            if (!Session::verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+            $csrfToken = $_POST['csrf_token'] ?? '';
+            error_log("CSRF token from form: " . $csrfToken);
+            error_log("Session CSRF token: " . Session::getCsrfToken());
+            if (!Session::verifyCsrfToken($csrfToken)) {
+                error_log("CSRF token validation failed");
                 Session::setFlash('error', 'Invalid CSRF token.');
                 $this->redirectToUsers();
             }
+            error_log("CSRF token validation passed");
 
             $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
             $email = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
@@ -92,18 +99,21 @@ class UserManagementController
 
             if (!$name || !$email || !$password || !$role) {
                 Session::setFlash('error', 'Please fill in all required fields.');
+                Session::setFlash('old', $_POST);
                 $this->redirectToCreateUser();
             }
 
             // Validate role
-            if (!in_array($role, ['admin', 'manager', 'advertiser'])) {
+            if (!in_array($role, ['admin', 'station_manager', 'advertiser'])) {
                 Session::setFlash('error', 'Invalid role selected.');
+                Session::setFlash('old', $_POST);
                 $this->redirectToCreateUser();
             }
 
             // Check if email already exists
             if ($this->userModel->findByEmail($email)) {
                 Session::setFlash('error', 'Email already exists.');
+                Session::setFlash('old', $_POST);
                 $this->redirectToCreateUser();
             }
 
@@ -119,7 +129,9 @@ class UserManagementController
                     'email_verified_at' => date('Y-m-d H:i:s')
                 ];
 
+                error_log("Creating user with data: " . json_encode($userData));
                 $userId = $this->userModel->createUser($userData);
+                error_log("User created with ID: " . $userId);
 
                 // Log activity
                 \App\Middleware\AuthMiddleware::logActivity('user_created', "New user created: $email with role $role");
@@ -227,7 +239,7 @@ class UserManagementController
             }
 
             try {
-                $user = $this->userModel->findById($userId);
+                $user = $this->userModel->find($userId);
                 if (!$user) {
                     Session::setFlash('error', 'User not found.');
                     $this->redirectToUsers();
@@ -276,7 +288,7 @@ class UserManagementController
             }
 
             try {
-                $user = $this->userModel->findById($userId);
+                $user = $this->userModel->find($userId);
                 if (!$user) {
                     Session::setFlash('error', 'User not found.');
                     $this->redirectToUsers();
