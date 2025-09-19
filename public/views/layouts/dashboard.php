@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= \App\Utils\Session::getCsrfToken() ?>">
     <title><?= $pageTitle ?? 'Dashboard' ?> - Zaa Radio</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -168,6 +169,311 @@
             font-weight: 500;
         }
 
+        /* Enhanced Table Styles */
+        .table {
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .table thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            padding: 1rem 0.75rem;
+        }
+
+        .table tbody tr {
+            transition: all 0.3s ease;
+            border-bottom: 1px solid #f1f3f4;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .table tbody td {
+            padding: 1rem 0.75rem;
+            vertical-align: middle;
+            border: none;
+        }
+
+        .table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Badge Styles */
+        .badge {
+            font-size: 0.7rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge.bg-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+        }
+
+        .badge.bg-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+            color: #000 !important;
+        }
+
+        .badge.bg-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%) !important;
+        }
+
+        .badge.bg-primary {
+            background: linear-gradient(135deg, #007bff 0%, #6610f2 100%) !important;
+        }
+
+        .badge.bg-info {
+            background: linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%) !important;
+        }
+
+        /* Button Group Styles */
+        .btn-group .btn {
+            border-radius: 0;
+            margin: 0;
+        }
+
+        .btn-group .btn:first-child {
+            border-top-left-radius: 6px;
+            border-bottom-left-radius: 6px;
+        }
+
+        .btn-group .btn:last-child {
+            border-top-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+
+        .btn-group .btn:not(:first-child):not(:last-child) {
+            border-left: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Form Control Styles */
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+            padding: 0.75rem 1rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+
+        /* Card Enhancements */
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-bottom: 1px solid #dee2e6;
+            border-radius: 12px 12px 0 0 !important;
+        }
+
+        /* Pagination Styles */
+        .btn-outline-secondary {
+            border-color: #6c757d;
+            color: #6c757d;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: #6c757d;
+            border-color: #6c757d;
+            color: white;
+        }
+
+        .btn-outline-secondary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Loading States */
+        .btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
+
+        /* Alert Styles */
+        .alert {
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+        }
+
+        .alert-danger {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            color: #856404;
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+            color: #0c5460;
+        }
+
+        /* Additional Table Enhancements */
+        .table tbody tr {
+            position: relative;
+        }
+
+        .table tbody tr::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .table tbody tr:hover::before {
+            opacity: 1;
+        }
+
+        /* Enhanced Form Styles */
+        .form-check-input:checked {
+            background-color: #667eea;
+            border-color: #667eea;
+        }
+
+        .form-check-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+
+        /* Loading Animation */
+        .spinner-border {
+            animation: spinner-border 0.75s linear infinite;
+        }
+
+        @keyframes spinner-border {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Fade In Animation */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Pulse Animation for Buttons */
+        .btn-pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Enhanced Card Hover Effects */
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card-hover:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Status Indicators */
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-indicator.pending {
+            background-color: #ffc107;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.approved {
+            background-color: #28a745;
+        }
+
+        .status-indicator.rejected {
+            background-color: #dc3545;
+        }
+
+        .status-indicator.cancelled {
+            background-color: #6c757d;
+        }
+
+        /* Enhanced Typography */
+        .text-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+
         .sidebar-toggle {
             background: none;
             border: none;
@@ -179,6 +485,8 @@
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
+                width: 100%;
+                z-index: 1050;
             }
             
             .sidebar.show {
@@ -187,6 +495,66 @@
             
             .main-content {
                 margin-left: 0;
+            }
+            
+            .topbar {
+                padding: 1rem;
+            }
+            
+            .content-area {
+                padding: 1rem;
+            }
+            
+            .stats-card {
+                margin-bottom: 1rem;
+            }
+            
+            .card-body {
+                padding: 1rem;
+            }
+            
+            .table-responsive {
+                font-size: 0.875rem;
+            }
+            
+            .btn-group .btn {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.75rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .topbar {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .topbar .d-flex {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .stats-card {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .stats-icon {
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+            
+            .calendar-grid {
+                font-size: 0.75rem;
+            }
+            
+            .calendar-day {
+                min-height: 60px;
+                padding: 4px;
+            }
+            
+            .day-number {
+                font-size: 0.75rem;
             }
         }
     </style>

@@ -228,6 +228,11 @@ switch ($path) {
         $bookingManagementController->showBookingDetails($matches[1]);
         break;
         
+    case '/admin/bookings/data':
+        $bookingManagementController = new \App\Controllers\BookingManagementController();
+        $bookingManagementController->getBookingsData();
+        break;
+        
     case '/admin/slots':
         $slotController = new \App\Controllers\SlotController();
         $slotController->showSlots();

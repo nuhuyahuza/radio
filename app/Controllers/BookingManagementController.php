@@ -29,7 +29,20 @@ class BookingManagementController
     }
 
     /**
-     * Show bookings management page
+     * Show bookings management page (for admin)
+     */
+    public function showBookings()
+    {
+        AuthMiddleware::requireRole('admin');
+        
+        $currentUser = Session::getUser();
+        
+        // Include admin bookings view
+        include __DIR__ . '/../../public/views/admin/bookings.php';
+    }
+
+    /**
+     * Show bookings management page (for manager)
      */
     public function showBookingsManagement()
     {
@@ -398,30 +411,150 @@ class BookingManagementController
     }
 
     /**
-     * Get bookings data for AJAX requests
+     * Get bookings data for AJAX requests (Admin)
      */
     public function getBookingsData()
     {
-        AuthMiddleware::requireManager();
+        AuthMiddleware::requireRole('admin');
         
         header('Content-Type: application/json');
         
         try {
-            $status = $_GET['status'] ?? 'all';
-            $limit = (int)($_GET['limit'] ?? 50);
+            $page = (int)($_GET['page'] ?? 1);
+            $limit = 20;
+            $offset = ($page - 1) * $limit;
             
-            if ($status === 'all') {
-                $bookings = $this->bookingModel->findAllWithDetails($limit);
-            } else {
-                $bookings = $this->bookingModel->findByStatus($status);
-            }
+            // Get filters
+            $filters = [
+                'status' => $_GET['status'] ?? null,
+                'date' => $_GET['date'] ?? null,
+                'advertiser' => $_GET['advertiser'] ?? null,
+                'amount' => $_GET['amount'] ?? null
+            ];
             
-            echo json_encode($bookings);
+            // Remove empty filters
+            $filters = array_filter($filters, function($value) {
+                return !empty($value);
+            });
+            
+            // For now, return sample data since we don't have real bookings
+            $sampleBookings = $this->getSampleBookings($page, $limit, $filters);
+            
+            echo json_encode([
+                'success' => true,
+                'bookings' => $sampleBookings['bookings'],
+                'pagination' => $sampleBookings['pagination']
+            ]);
             
         } catch (\Exception $e) {
             http_response_code(500);
-            echo json_encode(['error' => 'Failed to fetch bookings data']);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Failed to fetch bookings data: ' . $e->getMessage()
+            ]);
         }
+    }
+
+    /**
+     * Get sample bookings data for demo
+     */
+    private function getSampleBookings($page, $limit, $filters = [])
+    {
+        $allBookings = [
+            [
+                'id' => 1,
+                'advertiser_name' => 'Tech Solutions Inc',
+                'advertiser_email' => 'contact@techsolutions.com',
+                'date' => '2024-09-20',
+                'start_time' => '09:00:00',
+                'end_time' => '09:30:00',
+                'duration' => 30,
+                'total_amount' => 150.00,
+                'status' => 'pending',
+                'created_at' => '2024-09-19 14:30:00'
+            ],
+            [
+                'id' => 2,
+                'advertiser_name' => 'Marketing Pro',
+                'advertiser_email' => 'info@marketingpro.com',
+                'date' => '2024-09-20',
+                'start_time' => '10:00:00',
+                'end_time' => '11:00:00',
+                'duration' => 60,
+                'total_amount' => 300.00,
+                'status' => 'approved',
+                'created_at' => '2024-09-19 10:15:00'
+            ],
+            [
+                'id' => 3,
+                'advertiser_name' => 'Local Restaurant',
+                'advertiser_email' => 'owner@localrestaurant.com',
+                'date' => '2024-09-21',
+                'start_time' => '12:00:00',
+                'end_time' => '12:15:00',
+                'duration' => 15,
+                'total_amount' => 75.00,
+                'status' => 'rejected',
+                'created_at' => '2024-09-19 08:45:00'
+            ],
+            [
+                'id' => 4,
+                'advertiser_name' => 'Fitness Center',
+                'advertiser_email' => 'admin@fitnesscenter.com',
+                'date' => '2024-09-21',
+                'start_time' => '14:00:00',
+                'end_time' => '15:00:00',
+                'duration' => 60,
+                'total_amount' => 250.00,
+                'status' => 'approved',
+                'created_at' => '2024-09-18 16:20:00'
+            ],
+            [
+                'id' => 5,
+                'advertiser_name' => 'Real Estate Agency',
+                'advertiser_email' => 'sales@realestate.com',
+                'date' => '2024-09-22',
+                'start_time' => '16:00:00',
+                'end_time' => '16:30:00',
+                'duration' => 30,
+                'total_amount' => 200.00,
+                'status' => 'pending',
+                'created_at' => '2024-09-19 12:10:00'
+            ]
+        ];
+        
+        // Apply filters
+        $filteredBookings = $allBookings;
+        
+        if (isset($filters['status']) && $filters['status'] !== '') {
+            $filteredBookings = array_filter($filteredBookings, function($booking) use ($filters) {
+                return $booking['status'] === $filters['status'];
+            });
+        }
+        
+        if (isset($filters['advertiser']) && $filters['advertiser'] !== '') {
+            $filteredBookings = array_filter($filteredBookings, function($booking) use ($filters) {
+                return stripos($booking['advertiser_name'], $filters['advertiser']) !== false ||
+                       stripos($booking['advertiser_email'], $filters['advertiser']) !== false;
+            });
+        }
+        
+        // Pagination
+        $total = count($filteredBookings);
+        $totalPages = ceil($total / $limit);
+        $offset = ($page - 1) * $limit;
+        $bookings = array_slice($filteredBookings, $offset, $limit);
+        
+        return [
+            'bookings' => array_values($bookings),
+            'pagination' => [
+                'current_page' => $page,
+                'total_pages' => $totalPages,
+                'total' => $total,
+                'showing' => count($bookings),
+                'per_page' => $limit
+            ]
+        ];
     }
 
     /**

@@ -65,4 +65,18 @@ class AdminDashboardController
     {
         return $this->bookingModel->getRecentWithDetails($limit);
     }
+
+    /**
+     * Show settings page
+     */
+    public function showSettings()
+    {
+        // Check if user is admin
+        AuthMiddleware::requireRole('admin');
+
+        $currentUser = Session::getUser();
+        
+        // Include settings view
+        include __DIR__ . '/../../public/views/admin/settings.php';
+    }
 }
