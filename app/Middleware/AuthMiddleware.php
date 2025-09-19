@@ -130,7 +130,7 @@ class AuthMiddleware
         if (!$user) {
             return '/login';
         }
-
+        
         switch ($user['role']) {
             case 'admin':
                 return '/admin';

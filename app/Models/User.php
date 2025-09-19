@@ -22,6 +22,13 @@ class User extends BaseModel
     {
         return $this->whereFirst('email', $email);
     }
+/**
+     * Find user by email
+     */
+    public function findById($userId)
+    {
+        return $this->whereFirst('id', $userId);
+    }
 
     /**
      * Find active users by role
@@ -84,6 +91,10 @@ class User extends BaseModel
     {
         $hashedPassword = $this->hashPassword($newPassword);
         return $this->update($userId, ['password' => $hashedPassword]);
+    }
+
+    public function updateUser($userId, $userData){
+        return $this->update($userId, $userData);
     }
 
     /**
@@ -215,5 +226,9 @@ class User extends BaseModel
         $sql = "SELECT COUNT(*) as count FROM {$this->table} WHERE role = ? AND is_active = 1";
         $result = $this->db->fetch($sql, [$role]);
         return $result['count'];
+    }
+
+    public function deleteUser($userId){
+        return $this->delete($userId);
     }
 }

@@ -77,7 +77,7 @@ class UserManagementController
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // CSRF protection
-            if (!Session::validateCsrfToken($_POST['csrf_token'] ?? '')) {
+            if (!Session::verifyCsrfToken($_POST['csrf_token'] ?? '')) {
                 Session::setFlash('error', 'Invalid CSRF token.');
                 $this->redirectToUsers();
             }
@@ -147,7 +147,7 @@ class UserManagementController
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // CSRF protection
-            if (!Session::validateCsrfToken($_POST['csrf_token'] ?? '')) {
+            if (!Session::verifyCsrfToken($_POST['csrf_token'] ?? '')) {
                 Session::setFlash('error', 'Invalid CSRF token.');
                 $this->redirectToUsers();
             }
@@ -221,7 +221,7 @@ class UserManagementController
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // CSRF protection
-            if (!Session::validateCsrfToken($_POST['csrf_token'] ?? '')) {
+            if (!Session::verifyCsrfToken($_POST['csrf_token'] ?? '')) {
                 Session::setFlash('error', 'Invalid CSRF token.');
                 $this->redirectToUsers();
             }
@@ -270,7 +270,7 @@ class UserManagementController
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // CSRF protection
-            if (!Session::validateCsrfToken($_POST['csrf_token'] ?? '')) {
+            if (!Session::verifyCsrfToken($_POST['csrf_token'] ?? '')) {
                 Session::setFlash('error', 'Invalid CSRF token.');
                 $this->redirectToUsers();
             }
@@ -379,4 +379,3 @@ class UserManagementController
         exit;
     }
 }
-
