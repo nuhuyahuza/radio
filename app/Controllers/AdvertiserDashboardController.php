@@ -30,7 +30,7 @@ class AdvertiserDashboardController
         // Check if user is advertiser
         AuthMiddleware::requireRole('advertiser');
 
-        $currentUser = Session::get('user');
+        $currentUser = Session::getUser();
         
         // Get dashboard statistics
         $stats = $this->getDashboardStats($currentUser['id']);

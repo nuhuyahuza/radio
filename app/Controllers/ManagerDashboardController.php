@@ -33,7 +33,7 @@ class ManagerDashboardController
         // Check if user is station manager
         AuthMiddleware::requireRole('station_manager');
 
-        $currentUser = Session::get('user');
+        $currentUser = Session::getUser();
         
         // Get dashboard statistics
         $stats = $this->getDashboardStats();

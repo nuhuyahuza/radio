@@ -33,7 +33,7 @@ class AdminDashboardController
         // Check if user is admin
         AuthMiddleware::requireRole('admin');
 
-        $currentUser = Session::get('user');
+        $currentUser = Session::getUser();
         
         // Get dashboard statistics
         $stats = $this->getDashboardStats();

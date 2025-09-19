@@ -89,15 +89,27 @@ use App\Utils\Session;
 	<script>
 	document.addEventListener('DOMContentLoaded', function() {
 		const form = document.getElementById('loginForm');
-
+		const submitBtn = form.querySelector('button[type="submit"]');
+		const originalBtnText = submitBtn.innerHTML;
+		
 		form.addEventListener('submit', function(e) {
+			// Show spinner and disable button
+			submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Signing In...';
+			submitBtn.disabled = true;
+			
+			// Show confirmation alert
+			if (!confirm('Are you sure you want to sign in?')) {
+				e.preventDefault();
+				submitBtn.innerHTML = originalBtnText;
+				submitBtn.disabled = false;
+				return false;
+			}
+			
 			console.log('Form submitting to:', form.action);
 			console.log('Method:', form.method);
 			console.log('Email:', form.querySelector('input[name="email"]').value);
 			console.log('Password:', form.querySelector('input[name="password"]').value);
 			console.log('CSRF Token:', form.querySelector('input[name="csrf_token"]').value);
-
-			// Let the form submit normally
 		});
 	});
 	</script>

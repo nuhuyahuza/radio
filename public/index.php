@@ -218,6 +218,26 @@ switch ($path) {
         $reportsController->exportReports();
         break;
         
+    case '/admin/bookings':
+        $bookingManagementController = new \App\Controllers\BookingManagementController();
+        $bookingManagementController->showBookings();
+        break;
+        
+    case (preg_match('/^\/admin\/bookings\/(\d+)$/', $path, $matches) ? true : false):
+        $bookingManagementController = new \App\Controllers\BookingManagementController();
+        $bookingManagementController->showBookingDetails($matches[1]);
+        break;
+        
+    case '/admin/slots':
+        $slotController = new \App\Controllers\SlotController();
+        $slotController->showSlots();
+        break;
+        
+    case '/admin/settings':
+        $adminController = new \App\Controllers\AdminDashboardController();
+        $adminController->showSettings();
+        break;
+        
     // Handle POST requests
     default:
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
