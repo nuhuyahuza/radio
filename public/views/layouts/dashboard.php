@@ -173,41 +173,126 @@
         .table {
             border-collapse: separate;
             border-spacing: 0;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            background: white;
         }
-
         .table thead th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
             border: none;
-            font-weight: 600;
+            font-weight: 700;
             text-transform: uppercase;
-            font-size: 0.75rem;
+            font-size: 0.85rem;
             letter-spacing: 0.5px;
             padding: 1rem 0.75rem;
+            vertical-align: middle;
+            box-shadow: 0 2px 8px rgba(102,126,234,0.08);
         }
-
         .table tbody tr {
-            transition: all 0.3s ease;
+            transition: background 0.2s, box-shadow 0.2s;
             border-bottom: 1px solid #f1f3f4;
+            min-height: 64px;
         }
-
-        .table tbody tr:hover {
-            background-color: #f8f9fa;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
         .table tbody td {
             padding: 1rem 0.75rem;
             vertical-align: middle;
-            border: none;
+            font-size: 1rem;
+            background: white;
         }
-
+        .table tbody tr:hover {
+            background: #f6f8fc;
+        }
         .table tbody tr:last-child td {
             border-bottom: none;
+        }
+        .form-check-input {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            position: relative;
+            top: 2px;
+        }
+        .badge, .chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 999px;
+            padding: 0.5em 1.1em;
+            min-width: 60px;
+            min-height: 32px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 1px 4px rgba(102,126,234,0.07);
+        }
+        .badge.bg-info, .chip.bg-info {
+            background: linear-gradient(90deg, #17a2b8 0%, #6f42c1 100%) !important;
+            color: #fff !important;
+        }
+        .badge.bg-success, .chip.bg-success {
+            background: linear-gradient(90deg, #28a745 0%, #20c997 100%) !important;
+            color: #fff !important;
+        }
+        .badge.bg-warning, .chip.bg-warning {
+            background: linear-gradient(90deg, #ffc107 0%, #fd7e14 100%) !important;
+            color: #fff !important;
+        }
+        .badge.bg-danger, .chip.bg-danger {
+            background: linear-gradient(90deg, #dc3545 0%, #e83e8c 100%) !important;
+            color: #fff !important;
+        }
+        .badge.bg-secondary, .chip.bg-secondary {
+            background: linear-gradient(90deg, #6c757d 0%, #adb5bd 100%) !important;
+            color: #fff !important;
+        }
+        .btn-group .btn {
+            margin-right: 0.25rem;
+            margin-left: 0;
+            border-radius: 6px !important;
+            min-width: 36px;
+            min-height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-group .btn:last-child {
+            margin-right: 0;
+        }
+        .btn-sm {
+            font-size: 1rem;
+            padding: 0.35rem 0.7rem;
+        }
+        .fw-bold {
+            font-weight: 700 !important;
+        }
+        .text-gradient {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .table-responsive {
+            overflow-x: auto;
+        }
+        @media (max-width: 992px) {
+            .table thead th, .table tbody td {
+                font-size: 0.95rem;
+                padding: 0.75rem 0.5rem;
+            }
+        }
+        @media (max-width: 768px) {
+            .table thead th, .table tbody td {
+                font-size: 0.9rem;
+                padding: 0.5rem 0.25rem;
+            }
+            .badge, .chip {
+                min-width: 48px;
+                min-height: 24px;
+                font-size: 0.75rem;
+                padding: 0.3em 0.7em;
+            }
         }
 
         /* Badge Styles */
@@ -445,14 +530,6 @@
 
         .status-indicator.cancelled {
             background-color: #6c757d;
-        }
-
-        /* Enhanced Typography */
-        .text-gradient {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
 
         /* Custom Scrollbar */

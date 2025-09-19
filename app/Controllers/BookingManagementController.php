@@ -456,6 +456,23 @@ class BookingManagementController
     }
 
     /**
+     * Update booking status (AJAX, admin)
+     */
+    public function updateBookingStatus($bookingId)
+    {
+        AuthMiddleware::requireRole('admin');
+        header('Content-Type: application/json');
+        $input = json_decode(file_get_contents('php://input'), true);
+        $status = $input['status'] ?? null;
+        if (!in_array($status, ['approved', 'rejected'])) {
+            echo json_encode(['success' => false, 'message' => 'Invalid status']);
+            return;
+        }
+        // For demo, just return success (since we use sample data)
+        echo json_encode(['success' => true, 'message' => 'Booking status updated (demo)']);
+    }
+
+    /**
      * Get sample bookings data for demo
      */
     private function getSampleBookings($page, $limit, $filters = [])

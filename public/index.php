@@ -243,6 +243,16 @@ switch ($path) {
         $adminController->showSettings();
         break;
         
+    case (preg_match('/^\/admin\/bookings\/(\d+)\/status$/', $path, $matches) ? true : false):
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $bookingManagementController = new \App\Controllers\BookingManagementController();
+            $bookingManagementController->updateBookingStatus($matches[1]);
+        } else {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+        }
+        break;
+        
     // Handle POST requests
     default:
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
