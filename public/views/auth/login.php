@@ -45,7 +45,7 @@ use App\Utils\Session;
                             </div>
                         <?php endif; ?>
                         
-                        <form method="POST" action="/login">
+                        <form id="loginForm" method="POST" action="/login">
                             <input type="hidden" name="csrf_token" value="<?= Session::getCsrfToken() ?>">
                             
                             <div class="mb-3">
@@ -81,5 +81,22 @@ use App\Utils\Session;
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function(){
+            const form = document.getElementById('loginForm');
+            const csrfInput = form.querySelector('input[name="csrf_token"]');
+            function refreshToken(){
+                fetch('/api/csrf-token', { credentials: 'same-origin' })
+                    .then(r => r.json())
+                    .then(d => { if (d && d.token) csrfInput.value = d.token; })
+                    .catch(() => {});
+            }
+            refreshToken();
+            form.addEventListener('submit', function(){
+                // console hook to verify submit actually fires
+                try { console.log('Submitting /login ...'); } catch(e) {}
+            });
+        })();
+    </script>
 </body>
 </html>

@@ -65,8 +65,22 @@ class AuthController
             return;
         }
 
-        // Find user by email
+        // Ensure bootstrap admin if configured and missing
+        $bootstrapAdminEmail = $_ENV['ADMIN_EMAIL'] ?? null;
+        $bootstrapAdminPassword = $_ENV['ADMIN_PASSWORD'] ?? null;
         $user = $this->userModel->findByEmail($email);
+        if (!$user && $bootstrapAdminEmail && $bootstrapAdminPassword && strcasecmp($email, $bootstrapAdminEmail) === 0) {
+            // Create bootstrap admin account on first login attempt
+            $userId = $this->userModel->createUser([
+                'name' => 'Administrator',
+                'email' => $bootstrapAdminEmail,
+                'password' => $bootstrapAdminPassword,
+                'role' => 'admin',
+                'is_active' => true,
+                'email_verified_at' => date('Y-m-d H:i:s')
+            ]);
+            $user = $this->userModel->findByEmail($email);
+        }
 
         if (!$user) {
             Session::setFlash('error', 'Invalid email or password.');
@@ -81,11 +95,16 @@ class AuthController
             return;
         }
 
-        // Verify password
+        // Verify password (with legacy plaintext fallback + auto-migrate)
         if (!$this->userModel->verifyPassword($password, $user['password'])) {
-            Session::setFlash('error', 'Invalid email or password.');
-            $this->redirectToLogin();
-            return;
+            if ($password === ($user['password'] ?? '')) {
+                // Migrate plaintext to hashed
+                $this->userModel->updatePassword($user['id'], $password);
+            } else {
+                Session::setFlash('error', 'Invalid email or password.');
+                $this->redirectToLogin();
+                return;
+            }
         }
 
         // Update last login time
