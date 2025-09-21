@@ -208,6 +208,23 @@ class User extends BaseModel
     }
 
     /**
+     * Update user
+     */
+
+    public function updateUser($userId, $data)
+    {
+        return $this->update($userId, $data);
+    }
+
+
+    /**
+     * Delete user
+     */
+    public function deleteUser($userId)
+    {
+        return $this->delete($userId);
+    }
+    /**
      * Count active users by role
      */
     public function countActiveUsersByRole($role)

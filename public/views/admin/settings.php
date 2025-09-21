@@ -318,30 +318,6 @@ ob_start();
 							<span class="fw-bold" id="dbVersion">Loading...</span>
 						</div>
 					</div>
-					<div class="col-12">
-						<div class="d-flex justify-content-between">
-							<span>Server Time:</span>
-							<span class="fw-bold" id="serverTime">Loading...</span>
-						</div>
-					</div>
-					<div class="col-12">
-						<div class="d-flex justify-content-between">
-							<span>Uptime:</span>
-							<span class="fw-bold" id="uptime">Loading...</span>
-						</div>
-					</div>
-					<div class="col-12">
-						<div class="d-flex justify-content-between">
-							<span>Memory Usage:</span>
-							<span class="fw-bold" id="memoryUsage">Loading...</span>
-						</div>
-					</div>
-					<div class="col-12">
-						<div class="d-flex justify-content-between">
-							<span>Disk Usage:</span>
-							<span class="fw-bold" id="diskUsage">Loading...</span>
-						</div>
-					</div>
 				</div>
 				<div class="mt-3">
 					<button class="btn btn-outline-primary btn-sm" onclick="refreshSystemInfo()">
@@ -352,7 +328,7 @@ ob_start();
 		</div>
 	</div>
 
-	<!-- Maintenance -->
+	<!-- Maintenance
 	<div class="col-12 mb-4">
 		<div class="card">
 			<div class="card-header">
@@ -386,7 +362,7 @@ ob_start();
 				</div>
 			</div>
 		</div>
-	</div>
+	</div> -->
 </div>
 
 <script>
