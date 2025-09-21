@@ -50,6 +50,11 @@ class UserManagementController
      */
     public function showCreateUser()
     {
+        // Set variables for the view
+        $isEdit = false;
+        $currentPage = 'users';
+        $formAction = '/admin/users/create';
+        
         include __DIR__ . '/../../public/views/admin/user-form.php';
     }
 
@@ -65,6 +70,11 @@ class UserManagementController
             exit;
         }
 
+        // Set variables for the view
+        $isEdit = true;
+        $currentPage = 'users';
+        $formAction = "/admin/users/edit/{$userId}";
+        
         include __DIR__ . '/../../public/views/admin/user-form.php';
     }
 

@@ -44,6 +44,27 @@ class SlotController
     }
 
     /**
+     * Show slots for admin
+     */
+    public function showSlots()
+    {
+        AuthMiddleware::requireRole('admin');
+        
+        $user = Session::getUser();
+        $stationId = 1; // For now, we'll use station ID 1
+        
+        // Get slots for the next 30 days
+        $startDate = date('Y-m-d');
+        $endDate = date('Y-m-d', strtotime('+30 days'));
+        $slots = $this->slotModel->findByDateRange($startDate, $endDate, $stationId);
+        
+        // Get slot statistics
+        $stats = $this->slotModel->getStats($stationId);
+        
+        include __DIR__ . '/../../public/views/admin/slots.php';
+    }
+
+    /**
      * Show create slot form
      */
     public function showCreateSlot()
