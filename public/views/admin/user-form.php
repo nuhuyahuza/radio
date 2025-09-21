@@ -44,7 +44,7 @@ $old = \App\Utils\Session::hasFlash('old') ? \App\Utils\Session::getFlash('old')
 							<h5 class="card-title mb-0">User Information</h5>
 						</div>
 						<div class="card-body">
-							<form method="POST" action="/admin/users/create">
+							<form method="POST" action="<?= $formAction ?>">
 								<input type="hidden" name="csrf_token" value="<?= Session::getCsrfToken() ?>">
 
 								<div class="row">

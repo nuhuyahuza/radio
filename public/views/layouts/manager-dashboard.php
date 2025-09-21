@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<?= \App\Utils\Session::getCsrfToken() ?>">
-    <title><?= $pageTitle ?? 'Manager Dashboard' ?> - Zaa Radio</title>
+    <title><?= $pageTitle ?? 'Manager Dashboard' ?> - <?= \App\Utils\AppConfig::getAppName() ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -324,7 +324,7 @@
         <div class="sidebar-header">
             <a href="/" class="sidebar-brand">
                 <i class="fas fa-radio me-2"></i>
-                Zaa Radio
+                <?= \App\Utils\AppConfig::getAppName() ?>
             </a>
         </div>
         <nav class="sidebar-nav">

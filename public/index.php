@@ -243,8 +243,23 @@ switch ($path) {
         break;
         
     case '/admin/settings':
-        $adminController = new \App\Controllers\AdminDashboardController();
-        $adminController->showSettings();
+        $settingsController = new \App\Controllers\SettingsController();
+        $settingsController->showSettings();
+        break;
+        
+    case '/admin/settings/update':
+        $settingsController = new \App\Controllers\SettingsController();
+        $settingsController->updateSettings();
+        break;
+        
+    case '/admin/settings/reset':
+        $settingsController = new \App\Controllers\SettingsController();
+        $settingsController->resetSettings();
+        break;
+        
+    case '/admin/settings/data':
+        $settingsController = new \App\Controllers\SettingsController();
+        $settingsController->getSettingsData();
         break;
         
     case (preg_match('/^\/admin\/bookings\/(\d+)\/status$/', $path, $matches) ? true : false):
