@@ -183,20 +183,23 @@ class UserManagementController
 
             if (!$name || !$email || !$role) {
                 Session::setFlash('error', 'Please fill in all required fields.');
-                $this->redirectToEditUser($userId);
+                header("Location: /admin/users/edit/$userId");
+                exit;
             }
 
             // Validate role
-            if (!in_array($role, ['admin', 'manager', 'advertiser'])) {
+            if (!in_array($role, ['admin', 'station_manager', 'advertiser'])) {
                 Session::setFlash('error', 'Invalid role selected.');
-                $this->redirectToEditUser($userId);
+                header("Location: /admin/users/edit/$userId");
+                exit;
             }
 
             // Check if email already exists for another user
             $existingUser = $this->userModel->findByEmail($email);
             if ($existingUser && $existingUser['id'] != $userId) {
                 Session::setFlash('error', 'Email already exists for another user.');
-                $this->redirectToEditUser($userId);
+                header("Location: /admin/users/edit/$userId");
+                exit;
             }
 
             try {
@@ -221,13 +224,14 @@ class UserManagementController
                 \App\Middleware\AuthMiddleware::logActivity('user_updated', "User updated: $email");
 
                 Session::setFlash('success', 'User updated successfully.');
-                header("Location: /admin/users/$userId");
+                header("Location: /admin/users/edit/$userId");
                 exit;
 
             } catch (\Exception $e) {
                 Session::setFlash('error', 'Failed to update user: ' . $e->getMessage());
                 error_log("User Update Error: " . $e->getMessage());
-                $this->redirectToEditUser($userId);
+                header("Location: /admin/users/edit/$userId");
+                exit;
             }
         } else {
             $this->redirectToEditUser($userId);

@@ -23,16 +23,15 @@ $old = \App\Utils\Session::hasFlash('old') ? \App\Utils\Session::getFlash('old')
 				</a>
 			</div>
 
-			<?php if (Session::hasFlash('success')): ?>
-			<div class="alert alert-success alert-dismissible fade show" role="alert">
-				<?= Session::getFlash('success') ?>
-				<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+			<?php if (Session::hasFlash('error')): ?>
+			<div class="alert alert-danger">
+				<?= htmlspecialchars(Session::getFlash('error')) ?>
 			</div>
 			<?php endif; ?>
 
-			<?php if (Session::hasFlash('error')): ?>
-			<div class="alert alert-danger alert-dismissible fade show" role="alert">
-				<?= Session::getFlash('error') ?>
+			<?php if (Session::hasFlash('success')): ?>
+			<div class="alert alert-success alert-dismissible fade show" role="alert">
+				<?= htmlspecialchars(Session::getFlash('success')) ?>
 				<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 			</div>
 			<?php endif; ?>
