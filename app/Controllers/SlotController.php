@@ -23,6 +23,352 @@ class SlotController
     }
 
     /**
+     * Admin/Manager JSON: Get single slot details
+     */
+    public function getSlotDetailsJson($slotId)
+    {
+        $this->requireAdminOrManagerJson();
+        header('Content-Type: application/json');
+        $slot = $this->slotModel->find($slotId);
+        if (!$slot) {
+            echo json_encode(['success' => false, 'message' => 'Slot not found']);
+            return;
+        }
+        // Build details HTML for modal
+        $startTs = strtotime(($slot['date'] ?? '') . ' ' . ($slot['start_time'] ?? ''));
+        $endTs = strtotime(($slot['date'] ?? '') . ' ' . ($slot['end_time'] ?? ''));
+        $durationMinutes = $startTs && $endTs ? max(0, (int)(($endTs - $startTs) / 60)) : 0;
+        $statusBadgeClass = 'info';
+        $status = $slot['status'] ?? '';
+        if ($status === 'available') { $statusBadgeClass = 'success'; }
+        elseif ($status === 'blocked') { $statusBadgeClass = 'warning'; }
+        elseif ($status === 'booked') { $statusBadgeClass = 'primary'; }
+
+        $html = '';
+        $html .= '<div class="row g-3">';
+        $html .= '  <div class="col-md-6">';
+        $html .= '    <div class="card h-100">';
+        $html .= '      <div class="card-body">';
+        $html .= '        <h6 class="text-muted mb-2">Schedule</h6>';
+        $html .= '        <div class="fw-semibold">' . htmlspecialchars($slot['date'] ?? '') . '</div>';
+        $html .= '        <div class="text-muted small">' . htmlspecialchars($slot['start_time'] ?? '') . ' - ' . htmlspecialchars($slot['end_time'] ?? '') . ' (' . $durationMinutes . ' min)</div>';
+        $html .= '      </div>';
+        $html .= '    </div>';
+        $html .= '  </div>';
+        $html .= '  <div class="col-md-6">';
+        $html .= '    <div class="card h-100">';
+        $html .= '      <div class="card-body">';
+        $html .= '        <h6 class="text-muted mb-2">Details</h6>';
+        $html .= '        <div>Price: <span class="fw-semibold">GH₵' . htmlspecialchars((string)($slot['price'] ?? '')) . '</span></div>';
+        $html .= '        <div>Status: <span class="badge bg-' . $statusBadgeClass . '">' . htmlspecialchars($status) . '</span></div>';
+        $html .= '      </div>';
+        $html .= '    </div>';
+        $html .= '  </div>';
+        $html .= '  <div class="col-12">';
+        $html .= '    <div class="card">';
+        $html .= '      <div class="card-body">';
+        $html .= '        <h6 class="text-muted mb-2">Description</h6>';
+        $html .= '        <div>' . nl2br(htmlspecialchars($slot['description'] ?? '—')) . '</div>';
+        $html .= '      </div>';
+        $html .= '    </div>';
+        $html .= '  </div>';
+        $html .= '</div>';
+
+        echo json_encode(['success' => true, 'slot' => $slot, 'html' => $html]);
+    }
+
+    /**
+     * Admin/Manager JSON: Create slot
+     */
+    public function createSlotJson()
+    {
+        $this->requireAdminOrManagerJson();
+        header('Content-Type: application/json');
+        if (!$this->verifyJsonCsrf()) {
+            echo json_encode(['success' => false, 'message' => 'Invalid CSRF token']);
+            return;
+        }
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+        $date = trim($input['date'] ?? '');
+        $startTime = trim($input['start_time'] ?? '');
+        $endTime = trim($input['end_time'] ?? '');
+        $price = (float)($input['price'] ?? 0);
+        $status = $input['status'] ?? 'available';
+        $description = trim($input['description'] ?? '');
+        $errors = $this->validateSlotInput($date, $startTime, $endTime, $price, $status);
+        if (!empty($errors)) {
+            echo json_encode(['success' => false, 'message' => implode(' ', $errors)]);
+            return;
+        }
+        try {
+            $stationId = 1;
+            if ($this->slotModel->hasTimeConflict($stationId, $date, $startTime, $endTime)) {
+                echo json_encode(['success' => false, 'message' => 'This time slot conflicts with an existing slot.']);
+                return;
+            }
+            $user = Session::getUser();
+            $slotId = $this->slotModel->create([
+                'station_id' => $stationId,
+                'date' => $date,
+                'start_time' => $startTime,
+                'end_time' => $endTime,
+                'price' => $price,
+                'status' => $status,
+                'description' => $description,
+                'created_by' => $user['id'] ?? null
+            ]);
+            \App\Middleware\AuthMiddleware::logActivity('slot_created', "Slot #$slotId created via admin JSON");
+            echo json_encode(['success' => true, 'id' => $slotId]);
+        } catch (\Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Failed to create slot']);
+        }
+    }
+
+    /**
+     * Admin/Manager JSON: Update slot
+     */
+    public function updateSlotJson($slotId)
+    {
+        $this->requireAdminOrManagerJson();
+        header('Content-Type: application/json');
+        if (!$this->verifyJsonCsrf()) {
+            echo json_encode(['success' => false, 'message' => 'Invalid CSRF token']);
+            return;
+        }
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+        $date = trim($input['date'] ?? '');
+        $startTime = trim($input['start_time'] ?? '');
+        $endTime = trim($input['end_time'] ?? '');
+        $price = (float)($input['price'] ?? 0);
+        $status = $input['status'] ?? 'available';
+        $description = trim($input['description'] ?? '');
+        $errors = $this->validateSlotInput($date, $startTime, $endTime, $price, $status);
+        if (!empty($errors)) {
+            echo json_encode(['success' => false, 'message' => implode(' ', $errors)]);
+            return;
+        }
+        $slot = $this->slotModel->find($slotId);
+        if (!$slot) {
+            echo json_encode(['success' => false, 'message' => 'Slot not found']);
+            return;
+        }
+        // If switching to available ensure no booking conflict
+        if (($slot['status'] === 'booked') && $status === 'available' && $this->bookingModel->isSlotBooked($slotId)) {
+            echo json_encode(['success' => false, 'message' => 'Cannot make a booked slot available. Cancel booking first.']);
+            return;
+        }
+        $stationId = 1;
+        if ($this->slotModel->hasTimeConflict($stationId, $date, $startTime, $endTime, $slotId)) {
+            echo json_encode(['success' => false, 'message' => 'This time slot conflicts with an existing slot.']);
+            return;
+        }
+        $this->slotModel->update($slotId, [
+            'date' => $date,
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+            'price' => $price,
+            'status' => $status,
+            'description' => $description
+        ]);
+        \App\Middleware\AuthMiddleware::logActivity('slot_updated', "Slot #$slotId updated via admin JSON");
+        echo json_encode(['success' => true]);
+    }
+
+    /**
+     * Admin/Manager JSON: Delete slot
+     */
+    public function deleteSlotJson($slotId)
+    {
+        $this->requireAdminOrManagerJson();
+        header('Content-Type: application/json');
+        if (!$this->verifyJsonCsrf()) {
+            echo json_encode(['success' => false, 'message' => 'Invalid CSRF token']);
+            return;
+        }
+        $slot = $this->slotModel->find($slotId);
+        if (!$slot) {
+            echo json_encode(['success' => false, 'message' => 'Slot not found']);
+            return;
+        }
+        if ($this->bookingModel->isSlotBooked($slotId)) {
+            echo json_encode(['success' => false, 'message' => 'Cannot delete a booked slot.']);
+            return;
+        }
+        $this->slotModel->delete($slotId);
+        \App\Middleware\AuthMiddleware::logActivity('slot_deleted', "Slot #$slotId deleted via admin JSON");
+        echo json_encode(['success' => true]);
+    }
+
+    /**
+     * Admin/Manager JSON: Update slot status
+     */
+    public function updateSlotStatusJson($slotId)
+    {
+        $this->requireAdminOrManagerJson();
+        header('Content-Type: application/json');
+        if (!$this->verifyJsonCsrf()) {
+            echo json_encode(['success' => false, 'message' => 'Invalid CSRF token']);
+            return;
+        }
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+        $status = $input['status'] ?? '';
+        if (!in_array($status, ['available', 'blocked', 'booked'])) {
+            echo json_encode(['success' => false, 'message' => 'Invalid status']);
+            return;
+        }
+        $slot = $this->slotModel->find($slotId);
+        if (!$slot) {
+            echo json_encode(['success' => false, 'message' => 'Slot not found']);
+            return;
+        }
+        if ($status === 'available' && $this->bookingModel->isSlotBooked($slotId)) {
+            echo json_encode(['success' => false, 'message' => 'Cannot make booked slot available. Cancel booking first.']);
+            return;
+        }
+        $this->slotModel->update($slotId, ['status' => $status]);
+        echo json_encode(['success' => true]);
+    }
+
+    /**
+     * Admin/Manager JSON: Generate slots in bulk
+     */
+    public function generateSlotsJson()
+    {
+        $this->requireAdminOrManagerJson();
+        header('Content-Type: application/json');
+        if (!$this->verifyJsonCsrf()) {
+            echo json_encode(['success' => false, 'message' => 'Invalid CSRF token']);
+            return;
+        }
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+        $startDate = trim($input['start_date'] ?? '');
+        $endDate = trim($input['end_date'] ?? '');
+        $startTime = trim($input['start_time'] ?? '');
+        $endTime = trim($input['end_time'] ?? '');
+        $duration = (int)($input['duration'] ?? 30);
+        $price = (float)($input['price'] ?? 0);
+        $weekdaysOnly = !empty($input['weekdays_only']);
+        if (!$startDate || !$endDate || !$startTime || !$endTime || $duration <= 0) {
+            echo json_encode(['success' => false, 'message' => 'All fields are required for generation']);
+            return;
+        }
+        $stationId = 1;
+        $count = 0;
+        $current = strtotime($startDate);
+        $end = strtotime($endDate);
+        while ($current <= $end) {
+            $date = date('Y-m-d', $current);
+            $dayOfWeek = date('N', $current); // 1..7
+            if ($weekdaysOnly && ($dayOfWeek == 6 || $dayOfWeek == 7)) {
+                $current = strtotime('+1 day', $current);
+                continue;
+            }
+            $slotStart = strtotime($date . ' ' . $startTime);
+            $slotEndLimit = strtotime($date . ' ' . $endTime);
+            while ($slotStart < $slotEndLimit) {
+                $slotEnd = $slotStart + ($duration * 60);
+                if ($slotEnd > $slotEndLimit) {
+                    break;
+                }
+                $sStart = date('H:i:s', $slotStart);
+                $sEnd = date('H:i:s', $slotEnd);
+                if (!$this->slotModel->hasTimeConflict($stationId, $date, $sStart, $sEnd)) {
+                    $this->slotModel->create([
+                        'station_id' => $stationId,
+                        'date' => $date,
+                        'start_time' => $sStart,
+                        'end_time' => $sEnd,
+                        'price' => $price,
+                        'status' => 'available',
+                        'description' => ''
+                    ]);
+                    $count++;
+                }
+                $slotStart = $slotEnd;
+            }
+            $current = strtotime('+1 day', $current);
+        }
+        echo json_encode(['success' => true, 'count' => $count]);
+    }
+
+    /**
+     * Admin/Manager JSON: Bulk action on slots
+     */
+    public function bulkActionJson()
+    {
+        $this->requireAdminOrManagerJson();
+        header('Content-Type: application/json');
+        if (!$this->verifyJsonCsrf()) {
+            echo json_encode(['success' => false, 'message' => 'Invalid CSRF token']);
+            return;
+        }
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+        $action = $input['action'] ?? '';
+        $ids = $input['slot_ids'] ?? [];
+        if (empty($ids) || !in_array($action, ['block', 'unblock', 'delete'])) {
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            return;
+        }
+        $updated = 0; $deleted = 0;
+        foreach ($ids as $id) {
+            $slot = $this->slotModel->find($id);
+            if (!$slot) { continue; }
+            if ($action === 'delete') {
+                if ($this->bookingModel->isSlotBooked($id)) { continue; }
+                $this->slotModel->delete($id);
+                $deleted++;
+            } elseif ($action === 'block') {
+                $this->slotModel->update($id, ['status' => 'blocked']);
+                $updated++;
+            } elseif ($action === 'unblock') {
+                if ($this->bookingModel->isSlotBooked($id)) { continue; }
+                $this->slotModel->update($id, ['status' => 'available']);
+                $updated++;
+            }
+        }
+        echo json_encode(['success' => true, 'updated' => $updated, 'deleted' => $deleted]);
+    }
+
+    /**
+     * Helper: validate JSON CSRF from header
+     */
+    private function verifyJsonCsrf(): bool
+    {
+        $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+        return Session::verifyCsrfToken($token);
+    }
+
+    /**
+     * Helper: ensure admin or station_manager for JSON endpoints
+     */
+    private function requireAdminOrManagerJson(): void
+    {
+        $currentUser = Session::getUser();
+        $role = $currentUser['role'] ?? '';
+        if ($role !== 'admin' && $role !== 'station_manager') {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Forbidden']);
+            exit;
+        }
+    }
+
+    /**
+     * Helper: validate slot input
+     */
+    private function validateSlotInput($date, $startTime, $endTime, $price, $status): array
+    {
+        $errors = [];
+        if (empty($date) || !strtotime($date)) { $errors[] = 'Valid date is required.'; }
+        if (empty($startTime) || !strtotime($startTime)) { $errors[] = 'Valid start time is required.'; }
+        if (empty($endTime) || !strtotime($endTime)) { $errors[] = 'Valid end time is required.'; }
+        if (strtotime($startTime) >= strtotime($endTime)) { $errors[] = 'End time must be after start time.'; }
+        if ($price < 0) { $errors[] = 'Price must be a positive number.'; }
+        if (!in_array($status, ['available', 'blocked', 'booked'])) { $errors[] = 'Invalid status.'; }
+        return $errors;
+    }
+
+    /**
      * Show slots management page
      */
     public function showSlotsManagement()

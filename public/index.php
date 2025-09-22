@@ -177,6 +177,45 @@ switch ($path) {
         $slotController = new \App\Controllers\SlotController();
         $slotController->getSlotsCalendarData();
         break;
+
+    // Admin JSON endpoints for slots
+    case (preg_match('/^\/admin\/slots\/(\d+)$/', $path, $matches) ? true : false):
+        $slotController = new \App\Controllers\SlotController();
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $slotController->getSlotDetailsJson($matches[1]);
+        } elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+            $slotController->updateSlotJson($matches[1]);
+        } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+            $slotController->deleteSlotJson($matches[1]);
+        } else {
+            http_response_code(405);
+        }
+        break;
+
+    case '/admin/slots':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $slotController = new \App\Controllers\SlotController();
+            $slotController->createSlotJson();
+        } else {
+            $slotController = new \App\Controllers\SlotController();
+            $slotController->showSlots();
+        }
+        break;
+
+    case (preg_match('/^\/admin\/slots\/(\d+)\/status$/', $path, $matches) ? true : false):
+        $slotController = new \App\Controllers\SlotController();
+        $slotController->updateSlotStatusJson($matches[1]);
+        break;
+
+    case '/admin/slots/generate':
+        $slotController = new \App\Controllers\SlotController();
+        $slotController->generateSlotsJson();
+        break;
+
+    case '/admin/slots/bulk-action':
+        $slotController = new \App\Controllers\SlotController();
+        $slotController->bulkActionJson();
+        break;
         
     case '/manager/bookings':
         $bookingManagementController = new \App\Controllers\BookingManagementController();
