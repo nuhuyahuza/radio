@@ -181,14 +181,18 @@ switch ($path) {
     // Admin JSON endpoints for slots
     case (preg_match('/^\/admin\/slots\/(\d+)$/', $path, $matches) ? true : false):
         $slotController = new \App\Controllers\SlotController();
-        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        $method = $_SERVER['REQUEST_METHOD'];
+        $override = $_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'] ?? '';
+        if ($method === 'GET') {
             $slotController->getSlotDetailsJson($matches[1]);
-        } elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+        } elseif ($method === 'PUT' || ($method === 'POST' && strtoupper($override) === 'PUT')) {
             $slotController->updateSlotJson($matches[1]);
-        } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+        } elseif ($method === 'DELETE' || ($method === 'POST' && strtoupper($override) === 'DELETE')) {
             $slotController->deleteSlotJson($matches[1]);
         } else {
             http_response_code(405);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Method not allowed']);
         }
         break;
 

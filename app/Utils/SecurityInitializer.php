@@ -285,6 +285,24 @@ class SecurityInitializer
     public static function validateCsrfForPost()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Support JSON requests using X-CSRF-Token header
+            $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+            $isJson = stripos($contentType, 'application/json') !== false;
+            if ($isJson) {
+                $headerToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+                if (!\App\Utils\Session::verifyCsrfToken($headerToken)) {
+                    \App\Middleware\SecurityMiddleware::logSecurityEvent('csrf_token_invalid', [
+                        'token' => $headerToken,
+                        'uri' => $_SERVER['REQUEST_URI'] ?? ''
+                    ]);
+                    http_response_code(403);
+                    include __DIR__ . '/../../public/views/403.php';
+                    exit;
+                }
+                return;
+            }
+
+            // Default form POST validation
             $token = $_POST['csrf_token'] ?? '';
             if (!\App\Utils\Session::verifyCsrfToken($token)) {
                 \App\Middleware\SecurityMiddleware::logSecurityEvent('csrf_token_invalid', [

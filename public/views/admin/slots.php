@@ -525,6 +525,8 @@ function showCreateSlotModal() {
 	document.getElementById('slotModalTitle').textContent = 'Add New Slot';
 	document.getElementById('slotForm').reset();
 	setDefaultDates();
+    const saveBtn = document.getElementById('saveSlotBtn');
+    if (saveBtn) { saveBtn.textContent = 'Save Slot'; }
 	new bootstrap.Modal(document.getElementById('slotModal')).show();
 }
 
@@ -532,6 +534,8 @@ function showCreateSlotModal() {
 function editSlot(slotId) {
 	editingSlotId = slotId;
 	document.getElementById('slotModalTitle').textContent = 'Edit Slot';
+    const saveBtn = document.getElementById('saveSlotBtn');
+    if (saveBtn) { saveBtn.textContent = 'Update Slot'; }
 
 	fetch(`/admin/slots/${slotId}`)
 		.then(response => response.json())
@@ -568,33 +572,39 @@ document.getElementById('slotForm').addEventListener('submit', function(e) {
 		description: document.getElementById('slotDescription').value
 	};
 
-	const url = editingSlotId ? `/admin/slots/${editingSlotId}` : '/admin/slots';
-	const method = editingSlotId ? 'PUT' : 'POST';
+    const url = editingSlotId ? `/admin/slots/${editingSlotId}` : '/admin/slots';
+    // Use POST + X-HTTP-Method-Override for updates to avoid servers blocking PUT
+    const method = 'POST';
 
 	fetch(url, {
-			method: method,
-			headers: {
-				'Content-Type': 'application/json',
-				'X-CSRF-Token': getCsrfToken()
-			},
-			body: JSON.stringify(formData)
-		})
-		.then(response => response.json())
-		.then(data => {
-			if (data.success) {
-				showAlert(editingSlotId ? 'Slot updated successfully' : 'Slot created successfully',
-					'success');
-				bootstrap.Modal.getInstance(document.getElementById('slotModal')).hide();
-				loadSlots();
-				updateCalendar();
-			} else {
-				showAlert('Error: ' + data.message, 'danger');
-			}
-		})
-		.catch(error => {
-			console.error('Error:', error);
-			showAlert('Error saving slot', 'danger');
-		});
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfToken(),
+                ...(editingSlotId ? { 'X-HTTP-Method-Override': 'PUT' } : {})
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(async response => {
+            try { return await response.json(); } catch (_) { return { success: false, message: 'Unexpected server response' }; }
+        })
+        .then(data => {
+            if (data.success) {
+                showAlert(editingSlotId ? 'Slot updated successfully' : 'Slot created successfully',
+                    'success');
+                const modalEl = document.getElementById('slotModal');
+                const m = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                m.hide();
+                loadSlots();
+                updateCalendar();
+            } else {
+                showAlert('Error: ' + data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('Error saving slot', 'danger');
+        });
 });
 
 // Generate slots
@@ -729,7 +739,18 @@ function viewSlot(slotId) {
 		.then(data => {
 			if (data.success) {
 				document.getElementById('slotDetailsContent').innerHTML = data.html;
-				new bootstrap.Modal(document.getElementById('slotDetailsModal')).show();
+				const detailsEl = document.getElementById('slotDetailsModal');
+				const detailsModal = new bootstrap.Modal(detailsEl);
+				detailsModal.show();
+
+				// Wire Edit button to open the edit modal with this slotId
+				const editBtn = document.getElementById('editSlotBtn');
+				if (editBtn) {
+					editBtn.onclick = () => {
+						bootstrap.Modal.getInstance(detailsEl)?.hide();
+						editSlot(slotId);
+					};
+				}
 			} else {
 				showAlert('Error loading slot details: ' + data.message, 'danger');
 			}
