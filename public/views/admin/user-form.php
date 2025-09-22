@@ -43,7 +43,7 @@ $old = \App\Utils\Session::hasFlash('old') ? \App\Utils\Session::getFlash('old')
 							<h5 class="card-title mb-0">User Information</h5>
 						</div>
 						<div class="card-body">
-							<form method="POST" action="<?= $formAction ?>">
+							<form method="POST" action="<?= $formAction ?>" id="userForm">
 								<input type="hidden" name="csrf_token" value="<?= Session::getCsrfToken() ?>">
 
 								<div class="row">
@@ -182,6 +182,22 @@ $old = \App\Utils\Session::hasFlash('old') ? \App\Utils\Session::getFlash('old')
 		</div>
 	</div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('userForm');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    
+    form.addEventListener('submit', function(e) {
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Updating...';
+        
+        // Let the form submit normally
+        // The server will handle the update and redirect back with a message
+    });
+});
+</script>
 
 <?php
 $content = ob_get_clean();

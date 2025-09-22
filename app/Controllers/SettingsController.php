@@ -63,8 +63,7 @@ class SettingsController
                 if ($key === 'csrf_token') continue;
                 
                 // Get setting info
-                $sql = "SELECT * FROM settings WHERE `key` = ? LIMIT 1";
-                $setting = $this->settingsModel->db->fetch($sql, [$key]);
+                $setting = $this->settingsModel->getSettingByKey($key);
                 if (!$setting) continue;
 
                 // Validate based on type

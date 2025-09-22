@@ -128,4 +128,13 @@ class Settings extends BaseModel
             $this->setSetting($key, $data[0], $data[1], $data[2], true);
         }
     }
+
+    /**
+     * Get setting by key (for controller use)
+     */
+    public function getSettingByKey($key)
+    {
+        $sql = "SELECT * FROM {$this->table} WHERE `key` = ? LIMIT 1";
+        return $this->db->fetch($sql, [$key]);
+    }
 }

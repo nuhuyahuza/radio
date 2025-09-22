@@ -166,6 +166,7 @@ class UserManagementController
     public function updateUser($userId)
     {
         Session::start();
+        
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // CSRF protection
@@ -218,7 +219,7 @@ class UserManagementController
                     $userData['password'] = password_hash($password, PASSWORD_DEFAULT);
                 }
 
-                $this->userModel->updateUser($userId, $userData);
+                $result = $this->userModel->updateUser($userId, $userData);
 
                 // Log activity
                 \App\Middleware\AuthMiddleware::logActivity('user_updated', "User updated: $email");
