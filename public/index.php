@@ -153,6 +153,16 @@ switch ($path) {
         $slotController->getSlotsData();
         break;
         
+    case '/admin/slots/data':
+        $slotController = new \App\Controllers\SlotController();
+        $slotController->getSlotsData();
+        break;
+
+    case '/admin/slots/calendar':
+        $slotController = new \App\Controllers\SlotController();
+        $slotController->getSlotsCalendarData();
+        break;
+        
     case '/manager/bookings':
         $bookingManagementController = new \App\Controllers\BookingManagementController();
         $bookingManagementController->showBookingsManagement();
@@ -333,7 +343,7 @@ switch ($path) {
                         $userManagementController->createUser();
                         break;
                         
-                    case (preg_match('/^\/admin\/users\/edit\/(\d+)$/', $path, $matches) ? true : false):
+                case (preg_match('/^\/admin\/users\/update\/(\d+)$/', $path, $matches) ? true : false):
                         $userManagementController = new \App\Controllers\UserManagementController();
                         $userManagementController->updateUser($matches[1]);
                         break;

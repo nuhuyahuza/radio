@@ -126,12 +126,12 @@ $old = \App\Utils\Session::hasFlash('old') ? \App\Utils\Session::getFlash('old')
 									<div class="form-text">Inactive users cannot log in to the system.</div>
 								</div>
 
-								<div class="d-flex justify-content-between">
-									<a href="/admin/users" class="btn btn-secondary">Cancel</a>
-									<button type="submit" class="btn btn-primary">
-										<i class="fas fa-save"></i> <?= $isEdit ? 'Update User' : 'Create User' ?>
-									</button>
-								</div>
+                                <div class="d-flex justify-content-between">
+                                    <a href="/admin/users" class="btn btn-secondary">Cancel</a>
+                                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                                        <i class="fas fa-save"></i> <?= $isEdit ? 'Update User' : 'Create User' ?>
+                                    </button>
+                                </div>
 							</form>
 						</div>
 					</div>
@@ -186,16 +186,51 @@ $old = \App\Utils\Session::hasFlash('old') ? \App\Utils\Session::getFlash('old')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('userForm');
-    const submitBtn = form.querySelector('button[type="submit"]');
+    const submitBtn = document.getElementById('submitBtn');
     
-    form.addEventListener('submit', function(e) {
-        // Show loading state
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
         submitBtn.disabled = true;
+        const originalHtml = submitBtn.innerHTML;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Updating...';
-        
-        // Let the form submit normally
-        // The server will handle the update and redirect back with a message
+
+        const formData = new FormData(form);
+        try {
+            const res = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            });
+            const contentType = res.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                const data = await res.json();
+                const type = data.success ? 'success' : 'danger';
+                showInlineAlert(data.message || (data.success ? 'Updated successfully.' : 'Update failed.'), type);
+            } else {
+                // Server returned HTML (e.g., edit page). Treat as failure and avoid navigation.
+                const text = await res.text();
+                console.warn('Non-JSON response received for AJAX update, length:', text.length);
+                showInlineAlert('Update failed. Please check required fields.', 'danger');
+            }
+        } catch (err) {
+            showInlineAlert('Unexpected error while updating user.', 'danger');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalHtml;
+        }
     });
+
+    function showInlineAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show mt-3`;
+        alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+        const cardBody = form.closest('.card-body');
+        cardBody.insertBefore(alertDiv, cardBody.firstChild);
+        setTimeout(() => alertDiv.remove(), 5000);
+    }
 });
 </script>
 

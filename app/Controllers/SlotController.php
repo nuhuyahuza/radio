@@ -414,37 +414,115 @@ class SlotController
      */
     public function getSlotsData()
     {
-        AuthMiddleware::requireManager();
-        
+        // Allow both admin and station_manager
+        $currentUser = Session::getUser();
+        $role = $currentUser['role'] ?? '';
+        if ($role !== 'admin' && $role !== 'station_manager') {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Forbidden']);
+            return;
+        }
+
         header('Content-Type: application/json');
-        
+
         try {
             $stationId = 1; // For now, we'll use station ID 1
             $startDate = $_GET['start'] ?? date('Y-m-d');
             $endDate = $_GET['end'] ?? date('Y-m-d', strtotime('+30 days'));
-            
+
+            $statusFilter = $_GET['status'] ?? null;
+            $dateFilter = $_GET['date'] ?? null;
+
+            if (!empty($dateFilter)) {
+                $startDate = $dateFilter;
+                $endDate = $dateFilter;
+            }
+
             $slots = $this->slotModel->findByDateRange($startDate, $endDate, $stationId);
-            
-            // Transform for calendar display
-            $calendarSlots = [];
+
+            // Apply status filter if provided
+            if (!empty($statusFilter)) {
+                $slots = array_values(array_filter($slots, function ($s) use ($statusFilter) {
+                    return strtolower($s['status']) === strtolower($statusFilter);
+                }));
+            }
+
+            // Build response expected by admin view
+            $resultSlots = [];
             foreach ($slots as $slot) {
-                $calendarSlots[] = [
-                    'id' => $slot['id'],
-                    'title' => date('g:i A', strtotime($slot['start_time'])) . ' - ' . date('g:i A', strtotime($slot['end_time'])),
-                    'start' => $slot['date'] . 'T' . $slot['start_time'],
-                    'end' => $slot['date'] . 'T' . $slot['end_time'],
+                $startTs = strtotime($slot['date'] . ' ' . $slot['start_time']);
+                $endTs = strtotime($slot['date'] . ' ' . $slot['end_time']);
+                $durationMinutes = max(0, (int)(($endTs - $startTs) / 60));
+
+                $resultSlots[] = [
+                    'id' => (int)$slot['id'],
+                    'date' => $slot['date'],
+                    'start_time' => $slot['start_time'],
+                    'end_time' => $slot['end_time'],
+                    'duration' => $durationMinutes,
+                    'price' => (float)$slot['price'],
                     'status' => $slot['status'],
-                    'price' => floatval($slot['price']),
-                    'description' => $slot['description'],
-                    'color' => $this->getSlotColor($slot['status'])
+                    'booked_by' => null,
                 ];
             }
-            
-            echo json_encode($calendarSlots);
-            
+
+            $total = count($resultSlots);
+            $response = [
+                'success' => true,
+                'slots' => $resultSlots,
+                'pagination' => [
+                    'total_pages' => 1,
+                    'current_page' => 1,
+                    'total' => $total,
+                    'showing' => $total,
+                ],
+            ];
+
+            echo json_encode($response);
+
         } catch (\Exception $e) {
             http_response_code(500);
-            echo json_encode(['error' => 'Failed to fetch slots data']);
+            echo json_encode(['success' => false, 'message' => 'Failed to fetch slots data']);
+        }
+    }
+
+    /**
+     * Get calendar slots (admin and manager)
+     */
+    public function getSlotsCalendarData()
+    {
+        $currentUser = Session::getUser();
+        $role = $currentUser['role'] ?? '';
+        if ($role !== 'admin' && $role !== 'station_manager') {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Forbidden']);
+            return;
+        }
+
+        header('Content-Type: application/json');
+        try {
+            $stationId = 1;
+            $startDate = $_GET['start_date'] ?? date('Y-m-01');
+            $endDate = $_GET['end_date'] ?? date('Y-m-t');
+            $slots = $this->slotModel->findByDateRange($startDate, $endDate, $stationId);
+
+            $calendar = [];
+            foreach ($slots as $slot) {
+                $calendar[] = [
+                    'date' => $slot['date'],
+                    'start_time' => $slot['start_time'],
+                    'end_time' => $slot['end_time'],
+                    'status' => $slot['status'],
+                    'price' => (float)$slot['price'],
+                ];
+            }
+
+            echo json_encode(['success' => true, 'slots' => $calendar]);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Failed to fetch calendar slots']);
         }
     }
 

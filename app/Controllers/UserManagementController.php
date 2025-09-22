@@ -73,7 +73,7 @@ class UserManagementController
         // Set variables for the view
         $isEdit = true;
         $currentPage = 'users';
-        $formAction = "/admin/users/edit/{$userId}";
+        $formAction = "/admin/users/update/{$userId}";
         
         include __DIR__ . '/../../public/views/admin/user-form.php';
     }
@@ -166,11 +166,20 @@ class UserManagementController
     public function updateUser($userId)
     {
         Session::start();
-        
+        $wantsJson = (
+            (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) ||
+            (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+        );
+
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // CSRF protection
             if (!Session::verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+                if ($wantsJson) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Invalid CSRF token.']);
+                    exit;
+                }
                 Session::setFlash('error', 'Invalid CSRF token.');
                 $this->redirectToUsers();
             }
@@ -183,6 +192,11 @@ class UserManagementController
             $isActive = isset($_POST['is_active']) ? 1 : 0;
 
             if (!$name || !$email || !$role) {
+                if ($wantsJson) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Please fill in all required fields.']);
+                    exit;
+                }
                 Session::setFlash('error', 'Please fill in all required fields.');
                 header("Location: /admin/users/edit/$userId");
                 exit;
@@ -190,6 +204,11 @@ class UserManagementController
 
             // Validate role
             if (!in_array($role, ['admin', 'station_manager', 'advertiser'])) {
+                if ($wantsJson) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Invalid role selected.']);
+                    exit;
+                }
                 Session::setFlash('error', 'Invalid role selected.');
                 header("Location: /admin/users/edit/$userId");
                 exit;
@@ -198,6 +217,11 @@ class UserManagementController
             // Check if email already exists for another user
             $existingUser = $this->userModel->findByEmail($email);
             if ($existingUser && $existingUser['id'] != $userId) {
+                if ($wantsJson) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Email already exists for another user.']);
+                    exit;
+                }
                 Session::setFlash('error', 'Email already exists for another user.');
                 header("Location: /admin/users/edit/$userId");
                 exit;
@@ -224,11 +248,21 @@ class UserManagementController
                 // Log activity
                 \App\Middleware\AuthMiddleware::logActivity('user_updated', "User updated: $email");
 
+                if ($wantsJson) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => true, 'message' => 'User updated successfully.']);
+                    exit;
+                }
                 Session::setFlash('success', 'User updated successfully.');
                 header("Location: /admin/users/edit/$userId");
                 exit;
 
             } catch (\Exception $e) {
+                if ($wantsJson) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Failed to update user: ' . $e->getMessage()]);
+                    exit;
+                }
                 Session::setFlash('error', 'Failed to update user: ' . $e->getMessage());
                 error_log("User Update Error: " . $e->getMessage());
                 header("Location: /admin/users/edit/$userId");
