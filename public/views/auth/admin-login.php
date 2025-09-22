@@ -7,20 +7,12 @@ use App\Utils\Session;
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advertiser Login - Zaa Radio</title>
+	<title>Admin Login - Zaa Radio</title>
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 	<style>
-	.login-container {
-		min-height: 100vh;
-		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-	}
-
-	.login-card {
-		background: white;
-		border-radius: 15px;
-		box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-	}
+	.login-container { min-height: 100vh; background: linear-gradient(135deg, #141e30 0%, #243b55 100%);} 
+	.login-card { background: white; border-radius: 15px; box-shadow: 0 15px 35px rgba(0,0,0,0.2);} 
 	</style>
 </head>
 
@@ -31,9 +23,9 @@ use App\Utils\Session;
 				<div class="col-md-6 col-lg-4">
 					<div class="login-card p-5">
 						<div class="text-center mb-4">
-							<i class="fas fa-radio fa-3x text-primary mb-3"></i>
-							<h3 class="fw-bold">Zaa Radio</h3>
-                            <p class="text-muted">Advertiser login (email only)</p>
+							<i class="fas fa-user-shield fa-3x text-primary mb-3"></i>
+							<h3 class="fw-bold">Admin/Manager</h3>
+							<p class="text-muted">Sign in to continue</p>
 						</div>
 
 						<?php if (Session::hasFlash('error')): ?>
@@ -48,25 +40,26 @@ use App\Utils\Session;
 						</div>
 						<?php endif; ?>
 
-                        <form id="loginForm" method="POST" action="/login">
+						<form id="adminLoginForm" method="POST" action="/admin/login">
 							<input type="hidden" name="csrf_token" value="<?= Session::getCsrfToken() ?>">
-
 							<div class="mb-3">
 								<label for="email" class="form-label">Email</label>
-								<input type="email" class="form-control" id="email" name="email"
-									placeholder="Enter your email" required>
+								<input type="email" class="form-control" id="email" name="email" placeholder="admin@site.com" required>
+							</div>
+							<div class="mb-3">
+								<label for="password" class="form-label">Password</label>
+								<input type="password" class="form-control" id="password" name="password" placeholder="Your password" required>
 							</div>
 							<div class="d-grid">
 								<button type="submit" class="btn btn-primary btn-lg">
-									<i class="fas fa-sign-in-alt me-2"></i>
-                                    Continue
+									<i class="fas fa-right-to-bracket me-2"></i> Sign In
 								</button>
 							</div>
 						</form>
 
-                        <div class="text-center mt-3">
-                            <a href="/admin/login" class="text-decoration-none">Admin/Manager login</a>
-                        </div>
+						<div class="text-center mt-3">
+							<a href="/login" class="text-decoration-none">Advertiser login</a>
+						</div>
 
 						<div class="text-center mt-4">
 							<a href="/" class="text-decoration-none">
@@ -83,30 +76,17 @@ use App\Utils\Session;
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 	<script>
 	document.addEventListener('DOMContentLoaded', function() {
-		const form = document.getElementById('loginForm');
+		const form = document.getElementById('adminLoginForm');
 		const submitBtn = form.querySelector('button[type="submit"]');
 		const originalBtnText = submitBtn.innerHTML;
-		
 		form.addEventListener('submit', function(e) {
-			// Show spinner and disable button
 			submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Signing In...';
 			submitBtn.disabled = true;
-			
-			// Show confirmation alert
-			if (!confirm('Are you sure you want to sign in?')) {
-				e.preventDefault();
-				submitBtn.innerHTML = originalBtnText;
-				submitBtn.disabled = false;
-				return false;
-			}
-			
-			console.log('Form submitting to:', form.action);
-			console.log('Method:', form.method);
-			console.log('Email:', form.querySelector('input[name="email"]').value);
-			console.log('CSRF Token:', form.querySelector('input[name="csrf_token"]').value);
 		});
 	});
 	</script>
 </body>
 
 </html>
+
+

@@ -29,6 +29,66 @@ class BookingManagementController
     }
 
     /**
+     * Get booking details for Admin (JSON for modal)
+     */
+    public function getAdminBookingDetails($bookingId)
+    {
+        AuthMiddleware::requireRole('admin');
+        header('Content-Type: application/json');
+
+        try {
+            $booking = $this->bookingModel->findWithDetails($bookingId);
+
+            if (!$booking) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Booking not found'
+                ]);
+                return;
+            }
+
+            // Build small HTML snippet for the modal body
+            $html = '';
+            $html .= '<div class="row g-3">';
+            $html .= '  <div class="col-md-6">';
+            $html .= '    <div class="card h-100">';
+            $html .= '      <div class="card-body">';
+            $html .= '        <h6 class="text-muted mb-2">Advertiser</h6>';
+            $html .= '        <div class="fw-semibold">' . htmlspecialchars($booking['advertiser_name'] ?? '') . '</div>';
+            $html .= '        <div class="text-muted small">' . htmlspecialchars($booking['advertiser_email'] ?? '') . '</div>';
+            $html .= '        <div class="text-muted small">' . htmlspecialchars($booking['advertiser_phone'] ?? '') . '</div>';
+            $html .= '        <div class="text-muted small">' . htmlspecialchars($booking['advertiser_company'] ?? '') . '</div>';
+            $html .= '      </div>';
+            $html .= '    </div>';
+            $html .= '  </div>';
+            $html .= '  <div class="col-md-6">';
+            $html .= '    <div class="card h-100">';
+            $html .= '      <div class="card-body">';
+            $html .= '        <h6 class="text-muted mb-2">Slot</h6>';
+            $html .= '        <div class="fw-semibold">' . htmlspecialchars($booking['station_name'] ?? '') . '</div>';
+            $html .= '        <div class="text-muted small">' . htmlspecialchars($booking['date'] ?? '') . ' ' . htmlspecialchars($booking['start_time'] ?? '') . ' - ' . htmlspecialchars($booking['end_time'] ?? '') . '</div>';
+            $html .= '        <div class="text-muted small">Price: ' . htmlspecialchars((string)($booking['price'] ?? '')) . '</div>';
+            $html .= '        <div class="text-muted small">Status: <span class="badge bg-' . ($booking['status'] === 'approved' ? 'success' : ($booking['status'] === 'rejected' ? 'danger' : 'warning')) . '">' . htmlspecialchars($booking['status']) . '</span></div>';
+            $html .= '      </div>';
+            $html .= '    </div>';
+            $html .= '  </div>';
+            $html .= '</div>';
+
+            echo json_encode([
+                'success' => true,
+                'booking' => $booking,
+                'html' => $html
+            ]);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Failed to load booking details: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
      * Show bookings management page (for admin)
      */
     public function showBookings()

@@ -254,7 +254,7 @@ switch ($path) {
         
     case (preg_match('/^\/admin\/bookings\/(\d+)$/', $path, $matches) ? true : false):
         $bookingManagementController = new \App\Controllers\BookingManagementController();
-        $bookingManagementController->showBookingDetails($matches[1]);
+        $bookingManagementController->getAdminBookingDetails($matches[1]);
         break;
         
     case '/admin/bookings/data':
