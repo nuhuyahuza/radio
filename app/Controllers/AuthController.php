@@ -19,7 +19,65 @@ class AuthController
     }
 
     /**
-     * Show login form
+     * Show admin/manager login (email + password)
+     */
+    public function showAdminLogin()
+    {
+        if (Session::isLoggedIn()) {
+            $dashboardUrl = \App\Middleware\AuthMiddleware::getDashboardUrl();
+            header("Location: $dashboardUrl");
+            exit;
+        }
+        $csrfToken = Session::setCsrfToken();
+        include __DIR__ . '/../../public/views/auth/admin-login.php';
+    }
+
+    /**
+     * Process admin/manager login
+     */
+    public function adminLogin()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /admin/login');
+            return;
+        }
+        $csrfToken = $_POST['csrf_token'] ?? '';
+        if (!Session::verifyCsrfToken($csrfToken)) {
+            Session::setFlash('error', 'Invalid security token. Please try again.');
+            header('Location: /admin/login');
+            return;
+        }
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+        if (empty($email) || empty($password)) {
+            Session::setFlash('error', 'Please enter both email and password.');
+            header('Location: /admin/login');
+            return;
+        }
+        $user = $this->userModel->findByEmail($email);
+        if (!$user || !in_array($user['role'], ['admin','station_manager'])) {
+            Session::setFlash('error', 'Invalid credentials.');
+            header('Location: /admin/login');
+            return;
+        }
+        if (!$user['is_active']) {
+            Session::setFlash('error', 'Your account has been deactivated.');
+            header('Location: /admin/login');
+            return;
+        }
+        if (!$this->userModel->verifyPassword($password, $user['password'])) {
+            Session::setFlash('error', 'Invalid credentials.');
+            header('Location: /admin/login');
+            return;
+        }
+        $this->userModel->updateLastLogin($user['id']);
+        Session::setUser($user);
+        \App\Middleware\AuthMiddleware::logActivity('login', 'Admin/Manager login');
+        header('Location: ' . \App\Middleware\AuthMiddleware::getDashboardUrl());
+        exit;
+    }
+    /**
+     * Show advertiser login (email-only)
      */
     public function showLogin()
     {
@@ -38,7 +96,7 @@ class AuthController
     }
 
     /**
-     * Process login form submission
+     * Process advertiser email-only login
      */
     public function login()
     {
@@ -56,11 +114,10 @@ class AuthController
         }
 
         $email = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? '';
 
         // Validate input
-        if (empty($email) || empty($password)) {
-            Session::setFlash('error', 'Please enter both email and password.');
+        if (empty($email)) {
+            Session::setFlash('error', 'Please enter your email.');
             $this->redirectToLogin();
             return;
         }
@@ -82,7 +139,7 @@ class AuthController
             $user = $this->userModel->findByEmail($email);
         }
 
-        if (!$user) {
+        if (!$user || $user['role'] !== 'advertiser') {
             Session::setFlash('error', 'Invalid email or password.');
             $this->redirectToLogin();
             return;
@@ -95,17 +152,7 @@ class AuthController
             return;
         }
 
-        // Verify password (with legacy plaintext fallback + auto-migrate)
-        if (!$this->userModel->verifyPassword($password, $user['password'])) {
-            if ($password === ($user['password'] ?? '')) {
-                // Migrate plaintext to hashed
-                $this->userModel->updatePassword($user['id'], $password);
-            } else {
-                Session::setFlash('error', 'Invalid email or password.');
-                $this->redirectToLogin();
-                return;
-            }
-        }
+        // Passwordless advertiser login (email only)
 
         // Update last login time
         $this->userModel->updateLastLogin($user['id']);

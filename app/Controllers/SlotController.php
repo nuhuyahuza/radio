@@ -550,7 +550,8 @@ class SlotController
      */
     private function redirectToSlots()
     {
-        header('Location: /manager/slots');
+        // Unified slots path
+        header('Location: /slots');
         exit;
     }
 }

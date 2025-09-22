@@ -77,6 +77,15 @@ switch ($path) {
             $authController->showLogin();
         }
         break;
+
+    case '/admin/login':
+        $authController = new AuthController();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $authController->adminLogin();
+        } else {
+            $authController->showAdminLogin();
+        }
+        break;
         
     case '/logout':
         $authController = new AuthController();
@@ -133,22 +142,28 @@ switch ($path) {
         $bookingController->cancelDraft();
         break;
         
-    case '/manager/slots':
+    case '/slots':
         $slotController = new \App\Controllers\SlotController();
-        $slotController->showSlotsManagement();
+        // decide view by role
+        $currentUser = \App\Utils\Session::getUser();
+        if ($currentUser && ($currentUser['role'] ?? '') === 'admin') {
+            $slotController->showSlots();
+        } else {
+            $slotController->showSlotsManagement();
+        }
         break;
         
-    case '/manager/slots/create':
+    case '/slots/create':
         $slotController = new \App\Controllers\SlotController();
         $slotController->showCreateSlot();
         break;
         
-    case (preg_match('/^\/manager\/slots\/edit\/(\d+)$/', $path, $matches) ? true : false):
+    case (preg_match('/^\/slots\/edit\/(\d+)$/', $path, $matches) ? true : false):
         $slotController = new \App\Controllers\SlotController();
         $slotController->showEditSlot($matches[1]);
         break;
         
-    case '/manager/slots/data':
+    case '/slots/data':
         $slotController = new \App\Controllers\SlotController();
         $slotController->getSlotsData();
         break;
@@ -291,6 +306,10 @@ switch ($path) {
                     $authController = new AuthController();
                     $authController->login();
                     break;
+                case '/admin/login':
+                    $authController = new AuthController();
+                    $authController->adminLogin();
+                    break;
                     
                 case '/register':
                     $authController = new AuthController();
@@ -308,22 +327,22 @@ switch ($path) {
                     $bookingController->confirmBooking($matches[1]);
                     break;
                     
-                case '/manager/slots/create':
+                case '/slots/create':
                     $slotController = new \App\Controllers\SlotController();
                     $slotController->createSlot();
                     break;
                     
-                case (preg_match('/^\/manager\/slots\/edit\/(\d+)$/', $path, $matches) ? true : false):
+                case (preg_match('/^\/slots\/edit\/(\d+)$/', $path, $matches) ? true : false):
                     $slotController = new \App\Controllers\SlotController();
                     $slotController->updateSlot($matches[1]);
                     break;
                     
-                case (preg_match('/^\/manager\/slots\/delete\/(\d+)$/', $path, $matches) ? true : false):
+                case (preg_match('/^\/slots\/delete\/(\d+)$/', $path, $matches) ? true : false):
                     $slotController = new \App\Controllers\SlotController();
                     $slotController->deleteSlot($matches[1]);
                     break;
                     
-                    case (preg_match('/^\/manager\/slots\/cancel\/(\d+)$/', $path, $matches) ? true : false):
+                    case (preg_match('/^\/slots\/cancel\/(\d+)$/', $path, $matches) ? true : false):
                         $slotController = new \App\Controllers\SlotController();
                         $slotController->cancelSlot($matches[1]);
                         break;
