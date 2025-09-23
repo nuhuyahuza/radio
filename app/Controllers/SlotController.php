@@ -212,7 +212,7 @@ class SlotController
         }
         $input = json_decode(file_get_contents('php://input'), true) ?? [];
         $status = $input['status'] ?? '';
-        if (!in_array($status, ['available', 'blocked', 'booked'])) {
+        if (!in_array($status, ['available', 'blocked', 'booked', 'cancelled'])) {
             echo json_encode(['success' => false, 'message' => 'Invalid status']);
             return;
         }
@@ -364,7 +364,7 @@ class SlotController
         if (empty($endTime) || !strtotime($endTime)) { $errors[] = 'Valid end time is required.'; }
         if (strtotime($startTime) >= strtotime($endTime)) { $errors[] = 'End time must be after start time.'; }
         if ($price < 0) { $errors[] = 'Price must be a positive number.'; }
-        if (!in_array($status, ['available', 'blocked', 'booked'])) { $errors[] = 'Invalid status.'; }
+        if (!in_array($status, ['available', 'blocked', 'booked', 'cancelled'])) { $errors[] = 'Invalid status.'; }
         return $errors;
     }
 

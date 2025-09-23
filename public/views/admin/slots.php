@@ -74,6 +74,7 @@ ob_start();
 							<option value="available">Available</option>
 							<option value="booked">Booked</option>
 							<option value="blocked">Blocked</option>
+							<option value="cancelled">Cancelled</option>
 						</select>
 					</div>
 				</div>
@@ -174,6 +175,8 @@ ob_start();
 							<select class="form-select" id="slotStatus">
 								<option value="available">Available</option>
 								<option value="blocked">Blocked</option>
+								<option value="booked">Booked</option>
+								<option value="cancelled">Cancelled</option>
 							</select>
 						</div>
 						<div class="col-12">
@@ -525,8 +528,10 @@ function showCreateSlotModal() {
 	document.getElementById('slotModalTitle').textContent = 'Add New Slot';
 	document.getElementById('slotForm').reset();
 	setDefaultDates();
-    const saveBtn = document.getElementById('saveSlotBtn');
-    if (saveBtn) { saveBtn.textContent = 'Save Slot'; }
+	const saveBtn = document.getElementById('saveSlotBtn');
+	if (saveBtn) {
+		saveBtn.textContent = 'Save Slot';
+	}
 	new bootstrap.Modal(document.getElementById('slotModal')).show();
 }
 
@@ -534,8 +539,10 @@ function showCreateSlotModal() {
 function editSlot(slotId) {
 	editingSlotId = slotId;
 	document.getElementById('slotModalTitle').textContent = 'Edit Slot';
-    const saveBtn = document.getElementById('saveSlotBtn');
-    if (saveBtn) { saveBtn.textContent = 'Update Slot'; }
+	const saveBtn = document.getElementById('saveSlotBtn');
+	if (saveBtn) {
+		saveBtn.textContent = 'Update Slot';
+	}
 
 	fetch(`/admin/slots/${slotId}`)
 		.then(response => response.json())
@@ -572,39 +579,48 @@ document.getElementById('slotForm').addEventListener('submit', function(e) {
 		description: document.getElementById('slotDescription').value
 	};
 
-    const url = editingSlotId ? `/admin/slots/${editingSlotId}` : '/admin/slots';
-    // Use POST + X-HTTP-Method-Override for updates to avoid servers blocking PUT
-    const method = 'POST';
+	const url = editingSlotId ? `/admin/slots/${editingSlotId}` : '/admin/slots';
+	// Use POST + X-HTTP-Method-Override for updates to avoid servers blocking PUT
+	const method = 'POST';
 
 	fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': getCsrfToken(),
-                ...(editingSlotId ? { 'X-HTTP-Method-Override': 'PUT' } : {})
-            },
-            body: JSON.stringify(formData)
-        })
-        .then(async response => {
-            try { return await response.json(); } catch (_) { return { success: false, message: 'Unexpected server response' }; }
-        })
-        .then(data => {
-            if (data.success) {
-                showAlert(editingSlotId ? 'Slot updated successfully' : 'Slot created successfully',
-                    'success');
-                const modalEl = document.getElementById('slotModal');
-                const m = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-                m.hide();
-                loadSlots();
-                updateCalendar();
-            } else {
-                showAlert('Error: ' + data.message, 'danger');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showAlert('Error saving slot', 'danger');
-        });
+			method: method,
+			headers: {
+				'Content-Type': 'application/json',
+				'X-CSRF-Token': getCsrfToken(),
+				...(editingSlotId ? {
+					'X-HTTP-Method-Override': 'PUT'
+				} : {})
+			},
+			body: JSON.stringify(formData)
+		})
+		.then(async response => {
+			try {
+				return await response.json();
+			} catch (_) {
+				return {
+					success: false,
+					message: 'Unexpected server response'
+				};
+			}
+		})
+		.then(data => {
+			if (data.success) {
+				showAlert(editingSlotId ? 'Slot updated successfully' : 'Slot created successfully',
+					'success');
+				const modalEl = document.getElementById('slotModal');
+				const m = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+				m.hide();
+				loadSlots();
+				updateCalendar();
+			} else {
+				showAlert('Error: ' + data.message, 'danger');
+			}
+		})
+		.catch(error => {
+			console.error('Error:', error);
+			showAlert('Error saving slot', 'danger');
+		});
 });
 
 // Generate slots
@@ -874,7 +890,8 @@ function getStatusBadge(status) {
 	const badges = {
 		'available': '<span class="badge bg-success">Available</span>',
 		'booked': '<span class="badge bg-primary">Booked</span>',
-		'blocked': '<span class="badge bg-warning">Blocked</span>'
+		'blocked': '<span class="badge bg-warning">Blocked</span>',
+		'cancelled': '<span class="badge bg-secondary">Cancelled</span>'
 	};
 	return badges[status] || '<span class="badge bg-info">' + status + '</span>';
 }
