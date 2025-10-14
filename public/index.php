@@ -69,6 +69,21 @@ switch ($path) {
         $advertiserController->showDashboard();
         break;
         
+    case '/advertiser/bookings':
+        $advertiserController = new \App\Controllers\AdvertiserDashboardController();
+        $advertiserController->showBookings();
+        break;
+        
+    case (preg_match('/^\/advertiser\/bookings\/(\d+)$/', $path, $matches) ? true : false):
+        $advertiserController = new \App\Controllers\AdvertiserDashboardController();
+        $advertiserController->showBookingDetails($matches[1]);
+        break;
+        
+    case '/advertiser/profile':
+        $advertiserController = new \App\Controllers\AdvertiserDashboardController();
+        $advertiserController->showProfile();
+        break;
+        
     case '/login':
         $authController = new AuthController();
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

@@ -39,6 +39,14 @@ class Booking extends BaseModel
     }
 
     /**
+     * Get bookings by advertiser (alias for findByAdvertiser)
+     */
+    public function getByAdvertiser($advertiserId)
+    {
+        return $this->findByAdvertiser($advertiserId);
+    }
+
+    /**
      * Find bookings by status
      */
     public function findByStatus($status)

@@ -62,4 +62,74 @@ class AdvertiserDashboardController
     {
         return $this->bookingModel->getRecentByAdvertiser($advertiserId, $limit);
     }
+
+    /**
+     * Show advertiser bookings
+     */
+    public function showBookings()
+    {
+        // Check if user is advertiser
+        AuthMiddleware::requireRole('advertiser');
+
+        $currentUser = Session::getUser();
+        
+        // Get all bookings for this advertiser
+        $bookings = $this->bookingModel->getByAdvertiser($currentUser['id']);
+        
+        // Set variables for the view
+        $pageTitle = 'My Bookings';
+        $currentPage = 'bookings';
+        
+        include __DIR__ . '/../../public/views/advertiser/bookings.php';
+    }
+
+    /**
+     * Show booking details
+     */
+    public function showBookingDetails($bookingId)
+    {
+        // Check if user is advertiser
+        AuthMiddleware::requireRole('advertiser');
+
+        $currentUser = Session::getUser();
+        
+        // Get booking details
+        $booking = $this->bookingModel->find($bookingId);
+        
+        if (!$booking) {
+            Session::setFlash('error', 'Booking not found.');
+            header('Location: /advertiser/bookings');
+            exit;
+        }
+
+        // Check if booking belongs to this advertiser
+        if ($booking['advertiser_id'] != $currentUser['id']) {
+            Session::setFlash('error', 'Access denied.');
+            header('Location: /advertiser/bookings');
+            exit;
+        }
+        
+        // Set variables for the view
+        $pageTitle = 'Booking Details';
+        $currentPage = 'bookings';
+        
+        include __DIR__ . '/../../public/views/advertiser/booking-details.php';
+    }
+
+    /**
+     * Show advertiser profile
+     */
+    public function showProfile()
+    {
+        // Check if user is advertiser
+        AuthMiddleware::requireRole('advertiser');
+
+        $currentUser = Session::getUser();
+        
+        // Set variables for the view
+        $pageTitle = 'My Profile';
+        $currentPage = 'profile';
+        
+        include __DIR__ . '/../../public/views/advertiser/profile.php';
+    }
 }
