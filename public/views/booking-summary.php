@@ -256,7 +256,8 @@ $hasServerDraft = isset($booking) && empty($booking['id']);
 			} else {
 				document.getElementById('draftTime').textContent = '';
 			}
-			document.getElementById('draftTotal').textContent = draft.slot.price != null ? `$${draft.slot.price}` : '';
+			document.getElementById('draftTotal').textContent = draft.slot.price != null ? `GH₵${draft.slot.price}` :
+				'';
 			if (draft.slot.station_name) {
 				document.getElementById('draftStation').textContent = draft.slot.station_name;
 			}
@@ -306,7 +307,7 @@ $hasServerDraft = isset($booking) && empty($booking['id']);
 						// Handle server redirect manually (302/303)
 						if (resp.status === 302 || resp.status === 303) {
 							const loc = resp.headers.get('Location') || resp.headers.get('location') ||
-							'/';
+								'/';
 							if (loc) {
 								showAlert('Booking submitted successfully. Redirecting...', 'success');
 								setTimeout(() => {
