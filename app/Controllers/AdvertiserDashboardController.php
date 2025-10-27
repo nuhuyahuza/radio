@@ -56,11 +56,26 @@ class AdvertiserDashboardController
     }
 
     /**
-     * Get recent bookings for advertiser
+     * Get recent bookings for advertiser with session counts
      */
     private function getRecentBookings($advertiserId, $limit = 10)
     {
-        return $this->bookingModel->getRecentByAdvertiser($advertiserId, $limit);
+        $bookings = $this->bookingModel->getRecentByAdvertiser($advertiserId, $limit);
+        
+        // Add session count for each booking
+        $sessionModel = new \App\Models\BookingSession();
+        foreach ($bookings as &$booking) {
+            if ($booking['ad_type']) {
+                // This is a campaign booking, get session count
+                $sessions = $sessionModel->findByBooking($booking['id']);
+                $booking['session_count'] = count($sessions);
+            } else {
+                // Traditional single-slot booking
+                $booking['session_count'] = 1;
+            }
+        }
+        
+        return $bookings;
     }
 
     /**

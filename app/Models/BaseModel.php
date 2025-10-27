@@ -209,4 +209,25 @@ abstract class BaseModel
     {
         return $this->primaryKey;
     }
+
+    /**
+     * Check if record(s) exist for given condition(s)
+     */
+    public function exists($conditions) {
+        $sql = "SELECT 1 FROM {$this->table} WHERE ";
+        $clauses=[]; $params=[];
+        foreach ($conditions as $k=>$v) {
+            if (is_array($v)) {
+                $inVals = implode(',', array_fill(0,count($v),'?'));
+                $clauses[] = "$k IN ($inVals)";
+                $params = array_merge($params, $v);
+            } else {
+                $clauses[] = "$k = ?";
+                $params[] = $v;
+            }
+        }
+        $sql .= join(' AND ', $clauses)." LIMIT 1";
+        $r = $this->db->fetch($sql, $params);
+        return (bool)$r;
+    }
 }

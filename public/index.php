@@ -122,6 +122,11 @@ switch ($path) {
         include __DIR__ . '/api/slots.php';
         break;
         
+    case '/api/slots/check-availability':
+        header('Content-Type: application/json');
+        include __DIR__ . '/api/check-availability.php';
+        break;
+        
     case '/api/csrf-token':
         header('Content-Type: application/json');
         include __DIR__ . '/api/csrf-token.php';
@@ -149,7 +154,11 @@ switch ($path) {
 
     case '/booking/confirm':
         $bookingController = new \App\Controllers\BookingController();
-        $bookingController->confirmDraft();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $bookingController->confirmCampaignBooking();
+        } else {
+            $bookingController->confirmDraft();
+        }
         break;
 
     case '/booking/cancel':

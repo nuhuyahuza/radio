@@ -141,6 +141,102 @@ class NotificationService
     }
 
     /**
+     * Send campaign booking confirmation notification (for Jingles, LPMs, Talkshows)
+     */
+    public function sendCampaignBookingConfirmation($bookingData)
+    {
+        // Format ad type label
+        $adTypeLabels = [
+            'jingle' => 'Jingle',
+            'lpm' => 'Live Presenter Mention (LPM)',
+            'talkshow' => 'Talkshow'
+        ];
+        
+        $adTypeLabel = $adTypeLabels[$bookingData['ad_type']] ?? ucfirst($bookingData['ad_type']);
+        
+        // Create database notification
+        $this->createNotification(
+            $bookingData['advertiser_id'] ?? null,
+            'campaign_booking_received',
+            'Campaign Booking Confirmation',
+            "Your {$adTypeLabel} campaign booking has been received with {$bookingData['session_count']} scheduled sessions.",
+            [
+                'booking_id' => $bookingData['id'],
+                'ad_type' => $bookingData['ad_type'],
+                'session_count' => $bookingData['session_count'],
+                'campaign_start' => $bookingData['campaign_start'],
+                'campaign_end' => $bookingData['campaign_end'],
+                'total_amount' => $bookingData['total_amount']
+            ]
+        );
+
+        // Send email notification
+        try {
+            $subject = "Campaign Booking Confirmation - {$adTypeLabel}";
+            
+            $message = "
+                <html>
+                <head>
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }
+                        .content { padding: 20px; }
+                        .details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                        .details p { margin: 8px 0; }
+                        .highlight { color: #667eea; font-weight: bold; }
+                        .footer { background: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; color: #6c757d; }
+                    </style>
+                </head>
+                <body>
+                    <div class='header'>
+                        <h1>🎙️ Zaa Radio - Campaign Booking Confirmation</h1>
+                    </div>
+                    <div class='content'>
+                        <p>Dear {$bookingData['advertiser_name']},</p>
+                        
+                        <p>Thank you for booking with Zaa Radio! Your <strong>{$adTypeLabel}</strong> campaign has been successfully received and is pending approval.</p>
+                        
+                        <div class='details'>
+                            <h3>Campaign Details</h3>
+                            <p><strong>Ad Type:</strong> <span class='highlight'>{$adTypeLabel}</span></p>
+                            <p><strong>Booking ID:</strong> #{$bookingData['id']}</p>
+                            <p><strong>Number of Sessions:</strong> {$bookingData['session_count']}</p>
+                            <p><strong>Campaign Period:</strong> {$bookingData['campaign_start']} to {$bookingData['campaign_end']}</p>
+                            <p><strong>Total Amount:</strong> GH₵" . number_format($bookingData['total_amount'], 2) . "</p>
+                            <p><strong>Status:</strong> Pending Approval</p>
+                        </div>
+                        
+                        <p><strong>What happens next?</strong></p>
+                        <ul>
+                            <li>Our team will review your campaign booking</li>
+                            <li>You will receive a notification once approved</li>
+                            <li>All {$bookingData['session_count']} sessions will be scheduled for broadcast</li>
+                            <li>Payment instructions will be provided upon approval</li>
+                        </ul>
+                        
+                        <p>If you have any questions, please don't hesitate to contact us.</p>
+                        
+                        <p>Best regards,<br>The Zaa Radio Team</p>
+                    </div>
+                    <div class='footer'>
+                        <p>This is an automated email from Zaa Radio Advertisement Booking System</p>
+                    </div>
+                </body>
+                </html>
+            ";
+            
+            $this->emailService->send(
+                $bookingData['advertiser_email'],
+                $subject,
+                $message
+            );
+            
+        } catch (\Exception $e) {
+            error_log("Campaign booking confirmation email error: " . $e->getMessage());
+        }
+    }
+
+    /**
      * Send booking approval notification
      */
     public function sendBookingApproval($bookingData)

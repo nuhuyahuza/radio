@@ -303,51 +303,177 @@ class BookingController
     }
 
     /**
-     * Confirm booking (final step)
+     * Confirm campaign booking with multiple sessions (Jingles, LPMs, Talkshows)
      */
-    public function confirmBooking($bookingId)
+    public function confirmCampaignBooking()
     {
+        \App\Utils\Session::start();
+        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirectToBooking();
+            if ($this->isAjaxRequest()) {
+                $this->jsonResponse(['success' => false, 'message' => 'Invalid request method'], 405);
+            } else {
+                $this->redirectToBooking();
+            }
             return;
         }
 
+        // Get JSON payload
+        $json = file_get_contents('php://input');
+        $data = json_decode($json, true);
+        
+        if (!$data) {
+            // Fallback to POST data
+            $data = $_POST;
+        }
+
         // Validate CSRF token
-        $csrfToken = $_POST['csrf_token'] ?? '';
+        $csrfToken = $data['csrf_token'] ?? '';
         if (!Session::verifyCsrfToken($csrfToken)) {
-            Session::setFlash('error', 'Invalid security token. Please try again.');
-            $this->redirectToBooking();
+            if ($this->isAjaxRequest()) {
+                $this->jsonResponse(['success' => false, 'message' => 'Invalid security token'], 400);
+            } else {
+                Session::setFlash('error', 'Invalid security token');
+                $this->redirectToBooking();
+            }
             return;
         }
 
         try {
-            $booking = $this->bookingModel->find($bookingId);
+            // Extract data
+            $adType = $data['ad_type'] ?? '';
+            $selectedSlots = $data['selected_slots'] ?? [];
+            $advertiserName = trim($data['advertiser_name'] ?? '');
+            $advertiserEmail = trim($data['advertiser_email'] ?? '');
+            $advertiserPhone = trim($data['advertiser_phone'] ?? '');
+            $companyName = trim($data['company_name'] ?? '');
+            $message = trim($data['message'] ?? '');
+            $startDate = $data['start_date'] ?? '';
+            $endDate = $data['end_date'] ?? '';
+            $recurrence = $data['recurrence'] ?? 'once';
+            $weekdays = $data['weekdays'] ?? [];
+
+            // Validate
+            if (empty($adType) || empty($selectedSlots)) {
+                throw new \Exception('Missing required fields: ad_type or selected_slots');
+            }
             
-            if (!$booking) {
-                throw new \Exception('Booking not found.');
+            if (empty($advertiserName) || empty($advertiserEmail) || empty($advertiserPhone)) {
+                throw new \Exception('Advertiser information is required');
             }
 
-            if ($booking['status'] !== 'pending') {
-                throw new \Exception('Booking has already been processed.');
+            // Calculate total amount (simplified - could be based on slot rates)
+            $pricePerSlot = 50.00; // Default price, should be calculated based on time/duration
+            $totalAmount = count($selectedSlots) * $pricePerSlot;
+
+            $this->db->beginTransaction();
+
+            // Find or create advertiser
+            $advertiser = $this->userModel->findByEmail($advertiserEmail);
+            if (!$advertiser) {
+                $tempPassword = $this->generateTemporaryPassword();
+                $advertiserId = $this->userModel->createUser([
+                    'name' => $advertiserName,
+                    'email' => $advertiserEmail,
+                    'password' => $tempPassword,
+                    'role' => 'advertiser',
+                    'phone' => $advertiserPhone,
+                    'company' => $companyName,
+                    'is_active' => true,
+                    'email_verified_at' => date('Y-m-d H:i:s')
+                ]);
+                $this->notificationService->sendAccountCreation($advertiserId, $advertiserEmail, $advertiserName, $tempPassword);
+            } else {
+                $advertiserId = $advertiser['id'];
             }
 
-            // Update booking status to confirmed
-            $this->bookingModel->update($bookingId, [
-                'status' => 'confirmed',
-                'payment_status' => 'paid'
+            // Create parent booking
+            $bookingData = [
+                'advertiser_id' => $advertiserId,
+                'slot_id' => null, // Not using traditional slots
+                'ad_type' => $adType,
+                'recurrence_pattern' => $recurrence,
+                'campaign_start' => $startDate,
+                'campaign_end' => $endDate,
+                'weekdays' => is_array($weekdays) ? implode(',', $weekdays) : $weekdays,
+                'status' => 'pending',
+                'message' => $message,
+                'total_amount' => $totalAmount,
+                'payment_status' => 'pending'
+            ];
+            
+            $parentBookingId = $this->bookingModel->create($bookingData);
+
+            // Create booking sessions
+            $sessionModel = new \App\Models\BookingSession();
+            $sessionCount = 0;
+            
+            foreach ($selectedSlots as $slot) {
+                // Double-check availability
+                $exists = $sessionModel->exists([
+                    'session_date' => $slot['date'],
+                    'start_time' => $slot['start_time'],
+                    'end_time' => $slot['end_time'],
+                    'status' => ['pending', 'approved']
+                ]);
+                
+                if ($exists) {
+                    throw new \Exception('Slot already booked: ' . $slot['date'] . ' ' . $slot['start_time']);
+                }
+
+                // Create session
+                $sessionModel->create([
+                    'booking_id' => $parentBookingId,
+                    'session_date' => $slot['date'],
+                    'start_time' => $slot['start_time'],
+                    'end_time' => $slot['end_time'],
+                    'status' => 'pending'
+                ]);
+                
+                $sessionCount++;
+            }
+
+            $this->db->commit();
+
+            // Send confirmation email
+            $this->notificationService->sendCampaignBookingConfirmation([
+                'id' => $parentBookingId,
+                'advertiser_name' => $advertiserName,
+                'advertiser_email' => $advertiserEmail,
+                'ad_type' => $adType,
+                'session_count' => $sessionCount,
+                'campaign_start' => $startDate,
+                'campaign_end' => $endDate,
+                'total_amount' => $totalAmount
             ]);
 
-            // Log activity
-            \App\Middleware\AuthMiddleware::logActivity('booking_confirmed', "Booking #$bookingId confirmed by advertiser");
+            Session::setFlash('success', 'Your campaign booking has been submitted successfully! ' . $sessionCount . ' sessions created.');
 
-            Session::setFlash('success', 'Your booking has been confirmed! You will receive an email confirmation shortly.');
-            header('Location: /booking-success');
-            exit;
+            if ($this->isAjaxRequest()) {
+                $this->jsonResponse([
+                    'success' => true,
+                    'parent_booking_id' => $parentBookingId,
+                    'session_count' => $sessionCount,
+                    'redirect' => '/'
+                ], 200);
+            } else {
+                header('Location: /');
+                exit;
+            }
 
         } catch (\Exception $e) {
-            Session::setFlash('error', 'Confirmation failed: ' . $e->getMessage());
-            header("Location: /booking-summary/$bookingId");
-            exit;
+            $this->db->rollback();
+            
+            if ($this->isAjaxRequest()) {
+                $this->jsonResponse([
+                    'success' => false,
+                    'message' => 'Booking failed: ' . $e->getMessage()
+                ], 500);
+            } else {
+                Session::setFlash('error', 'Booking failed: ' . $e->getMessage());
+                header('Location: /book');
+                exit;
+            }
         }
     }
 

@@ -46,24 +46,60 @@ class AdminDashboardController
     }
 
     /**
-     * Get dashboard statistics
+     * Get dashboard statistics with ad type breakdown
      */
     private function getDashboardStats()
     {
-        return [
+        // Get base stats
+        $stats = [
             'total_bookings' => $this->bookingModel->count(),
             'total_revenue' => $this->bookingModel->getTotalRevenue(),
             'active_advertisers' => $this->userModel->countActiveUsersByRole('advertiser'),
             'pending_bookings' => $this->bookingModel->countByStatus('pending')
         ];
+        
+        // Get ad type breakdown
+        $adTypeQuery = "
+            SELECT ad_type, COUNT(*) as count, SUM(total_amount) as revenue
+            FROM bookings
+            WHERE ad_type IS NOT NULL
+            GROUP BY ad_type
+        ";
+        $adTypeStats = $this->bookingModel->fetchAll($adTypeQuery);
+        
+        $stats['jingle_count'] = 0;
+        $stats['lpm_count'] = 0;
+        $stats['talkshow_count'] = 0;
+        
+        foreach ($adTypeStats as $row) {
+            $stats[$row['ad_type'] . '_count'] = $row['count'];
+            $stats[$row['ad_type'] . '_revenue'] = $row['revenue'];
+        }
+        
+        return $stats;
     }
 
     /**
-     * Get recent bookings
+     * Get recent bookings with session counts
      */
     private function getRecentBookings($limit = 10)
     {
-        return $this->bookingModel->getRecentWithDetails($limit);
+        $bookings = $this->bookingModel->getRecentWithDetails($limit);
+        
+        // Add session count for each booking
+        $sessionModel = new \App\Models\BookingSession();
+        foreach ($bookings as &$booking) {
+            if ($booking['ad_type']) {
+                // This is a campaign booking, get session count
+                $sessions = $sessionModel->findByBooking($booking['id']);
+                $booking['session_count'] = count($sessions);
+            } else {
+                // Traditional single-slot booking
+                $booking['session_count'] = 1;
+            }
+        }
+        
+        return $bookings;
     }
 
     /**

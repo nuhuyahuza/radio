@@ -10,10 +10,59 @@ class Booking extends BaseModel
 {
     protected $table = 'bookings';
     protected $fillable = [
-        'advertiser_id', 'slot_id', 'status', 'message', 'total_amount',
+        'advertiser_id', 'slot_id', 'ad_type', 'recurrence_pattern', 'campaign_start', 'campaign_end',
+        'frequency_per_day', 'weekdays', 'status', 'message', 'total_amount',
         'payment_status', 'payment_method', 'payment_reference', 'approved_by',
         'approved_at', 'rejected_reason'
     ];
+    // Generate sessions for a booking according to ad_type & recurrence
+    public static function generateSessions($data) {
+        $sessions = [];
+        if ($data['ad_type'] === 'jingle') {
+            $start = new \DateTime($data['campaign_start']);
+            $end = new \DateTime($data['campaign_end']);
+            $interval = new \DateInterval('P1D');
+            for ($d = clone $start; $d <= $end; $d->add($interval)) {
+                foreach ($data['jingle_times'] as $time) {
+                    $sessions[] = [
+                        'session_date' => $d->format('Y-m-d'),
+                        'start_time' => $time,
+                        'end_time' => date('H:i:s', strtotime("$time +{$data['duration']} seconds")),
+                    ];
+                }
+            }
+        } elseif ($data['ad_type'] === 'lpm') {
+            $start = new \DateTime($data['campaign_start']);
+            $end = new \DateTime($data['campaign_end']);
+            $interval = new \DateInterval('P1D');
+            for ($d = clone $start; $d <= $end; $d->add($interval)) {
+                if (in_array(strtolower($d->format('l')), $data['weekdays']) || $data['recurrence_pattern']==='daily') {
+                    $sessions[] = [
+                        'session_date' => $d->format('Y-m-d'),
+                        'start_time' => $data['lpm_start'],
+                        'end_time' => $data['lpm_end'],
+                    ];
+                }
+            }
+        } elseif ($data['ad_type'] === 'talkshow') {
+            $start = new \DateTime($data['campaign_start']);
+            $end = new \DateTime($data['campaign_end']);
+            $interval = new \DateInterval('P1D');
+            for ($d = clone $start; $d <= $end; $d->add($interval)) {
+                if (
+                    ($data['recurrence_pattern']==='weekly' && strtolower($d->format('l'))==strtolower($data['weekday'])) ||
+                    ($data['recurrence_pattern']==='once' && $d->format('Y-m-d') === $data['talkshow_date'])
+                ) {
+                    $sessions[] = [
+                        'session_date' => $d->format('Y-m-d'),
+                        'start_time' => $data['talkshow_start'],
+                        'end_time' => $data['talkshow_end'],
+                    ];
+                }
+            }
+        }
+        return $sessions;
+    }
 
     /**
      * Find bookings by advertiser

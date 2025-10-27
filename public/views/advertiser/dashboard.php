@@ -91,7 +91,9 @@ ob_start();
                         <thead>
                             <tr>
                                 <th>ID</th>
+                                <th>Type</th>
                                 <th>Date & Time</th>
+                                <th>Sessions</th>
                                 <th>Amount</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -100,16 +102,47 @@ ob_start();
                         <tbody>
                             <?php if (!empty($recentBookings)): ?>
                                 <?php foreach ($recentBookings as $booking): ?>
+                                    <?php
+                                    // Determine ad type badge
+                                    $adTypeBadge = '';
+                                    $adTypeIcon = 'fa-radio';
+                                    if (!empty($booking['ad_type'])) {
+                                        switch ($booking['ad_type']) {
+                                            case 'jingle':
+                                                $adTypeBadge = '<span class="badge" style="background: #28a745; color: white;"><i class="fas fa-music me-1"></i>Jingle</span>';
+                                                break;
+                                            case 'lpm':
+                                                $adTypeBadge = '<span class="badge" style="background: #007bff; color: white;"><i class="fas fa-microphone me-1"></i>LPM</span>';
+                                                break;
+                                            case 'talkshow':
+                                                $adTypeBadge = '<span class="badge" style="background: #fd7e14; color: white;"><i class="fas fa-comments me-1"></i>Talkshow</span>';
+                                                break;
+                                            default:
+                                                $adTypeBadge = '<span class="badge badge-secondary">Standard</span>';
+                                        }
+                                    } else {
+                                        $adTypeBadge = '<span class="badge badge-secondary">Standard</span>';
+                                    }
+                                    ?>
                                     <tr>
                                         <td>#<?= $booking['id'] ?></td>
+                                        <td><?= $adTypeBadge ?></td>
                                         <td>
                                             <div>
-                                                <div class="fw-bold"><?= date('M j, Y', strtotime($booking['date'])) ?></div>
-                                                <small class="text-muted">
-                                                    <?= date('g:i A', strtotime($booking['start_time'])) ?> - 
-                                                    <?= date('g:i A', strtotime($booking['end_time'])) ?>
-                                                </small>
+                                                <?php if (!empty($booking['ad_type']) && !empty($booking['campaign_start'])): ?>
+                                                    <div class="fw-bold"><?= date('M j', strtotime($booking['campaign_start'])) ?> - <?= date('M j, Y', strtotime($booking['campaign_end'])) ?></div>
+                                                    <small class="text-muted">Campaign</small>
+                                                <?php else: ?>
+                                                    <div class="fw-bold"><?= date('M j, Y', strtotime($booking['date'])) ?></div>
+                                                    <small class="text-muted">
+                                                        <?= date('g:i A', strtotime($booking['start_time'])) ?> - 
+                                                        <?= date('g:i A', strtotime($booking['end_time'])) ?>
+                                                    </small>
+                                                <?php endif; ?>
                                             </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-info"><?= $booking['session_count'] ?? 1 ?> session<?= ($booking['session_count'] ?? 1) > 1 ? 's' : '' ?></span>
                                         </td>
                                         <td class="fw-bold">GH₵<?= number_format($booking['total_amount'], 2) ?></td>
                                         <td>
@@ -142,10 +175,10 @@ ob_start();
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center text-muted py-4">
                                         <i class="fas fa-calendar-plus fa-2x mb-2"></i>
                                         <div>No bookings yet</div>
-                                        <small>Start by booking your first slot!</small>
+                                        <small>Start by booking your first campaign!</small>
                                     </td>
                                 </tr>
                             <?php endif; ?>

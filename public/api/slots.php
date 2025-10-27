@@ -1,6 +1,6 @@
 <?php
 /**
- * Slots API - Returns available slots in JSON format
+ * Slots API - Returns slots and booking sessions in JSON format for calendar display
  * Uses actual database queries to fetch slot data
  */
 
@@ -9,80 +9,148 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\Models\Slot;
 use App\Models\Booking;
+use App\Models\BookingSession;
 
 header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET');
 
 try {
     $slotModel = new Slot();
     $bookingModel = new Booking();
+    $sessionModel = new BookingSession();
     
-    // Get date range (next 30 days)
-    $startDate = date('Y-m-d');
-    $endDate = date('Y-m-d', strtotime('+30 days'));
+    // Get date range from query params (optional)
+    $startDate = $_GET['start'] ?? date('Y-m-01');
+    $endDate = $_GET['end'] ?? date('Y-m-t', strtotime('+2 months'));
     
-    // Fetch slots from database
+    // Fetch traditional slots
     $slots = $slotModel->findByDateRange($startDate, $endDate);
     
-    // Transform slots for FullCalendar
-    $calendarSlots = [];
+    // Check if booking_sessions table exists before querying
+    $sessions = [];
+    try {
+        // Fetch booking sessions with ad type information
+        $sql = "
+            SELECT 
+                bs.id,
+                bs.session_date as date,
+                bs.start_time,
+                bs.end_time,
+                bs.status,
+                b.ad_type,
+                b.advertiser_id,
+                u.name as advertiser_name,
+                u.company as company_name
+            FROM booking_sessions bs
+            JOIN bookings b ON bs.booking_id = b.id
+            LEFT JOIN users u ON b.advertiser_id = u.id
+            WHERE bs.session_date BETWEEN ? AND ?
+            ORDER BY bs.session_date, bs.start_time
+        ";
+        
+        $sessions = $sessionModel->fetchAll($sql, [$startDate, $endDate]);
+    } catch (\Exception $e) {
+        // Table doesn't exist yet - this is okay before migration
+        error_log("Booking sessions table not found: " . $e->getMessage());
+        $sessions = [];
+    }
     
+    $events = [];
+    
+    // Convert slots to FullCalendar format
     foreach ($slots as $slot) {
-        // Check if slot is booked
-        $isBooked = $bookingModel->isSlotBooked($slot['id']);
-        $status = $isBooked ? 'booked' : $slot['status'];
+        $status = $slot['status'];
+        $title = '';
+        $color = '';
         
-        // Determine color based on status
-        $color = '#28a745'; // Green for available
-        if ($status === 'booked') {
-            $color = '#dc3545'; // Red for booked
-        } elseif ($status === 'cancelled') {
-            $color = '#6c757d'; // Gray for cancelled
-        } elseif ($status === 'maintenance') {
-            $color = '#ffc107'; // Yellow for maintenance
+        if ($status === 'available') {
+            $title = 'Available - GH₵' . number_format($slot['price'], 2);
+            $color = '#28a745'; // Green
+        } elseif ($status === 'booked') {
+            $title = 'Booked';
+            $color = '#dc3545'; // Red
+        } elseif ($status === 'pending') {
+            $title = 'Pending';
+            $color = '#ffc107'; // Yellow
         }
         
-        // Create time slot title
-        $startTime = date('g:i A', strtotime($slot['start_time']));
-        $endTime = date('g:i A', strtotime($slot['end_time']));
-        $title = $startTime . ' - ' . $endTime;
-        
-        // Add price to title if available
-        if ($slot['price'] > 0) {
-            $title .= ' (GH₵' . number_format($slot['price'], 0) . ')';
-        }
-        
-        $calendarSlots[] = [
-            'id' => $slot['id'],
+        $events[] = [
+            'id' => 'slot_' . $slot['id'],
             'title' => $title,
             'start' => $slot['date'] . 'T' . $slot['start_time'],
             'end' => $slot['date'] . 'T' . $slot['end_time'],
-            'status' => $status,
-            'price' => floatval($slot['price']),
             'color' => $color,
-            'description' => $slot['description'] ?? '',
             'extendedProps' => [
-                'status' => $status,
-                'price' => floatval($slot['price']),
+                'type' => 'slot',
                 'slotId' => $slot['id'],
-                'date' => $slot['date'],
-                'startTime' => $slot['start_time'],
-                'endTime' => $slot['end_time']
+                'status' => $status,
+                'price' => $slot['price'],
+                'description' => $slot['description'] ?? ''
             ]
         ];
     }
     
-    // Return JSON response
-    echo json_encode($calendarSlots);
+    // Convert booking sessions to FullCalendar format with ad type colors
+    foreach ($sessions as $session) {
+        $adType = $session['ad_type'];
+        $status = $session['status'];
+        
+        // Set color based on ad type
+        $color = '';
+        $typeLabel = '';
+        
+        switch ($adType) {
+            case 'jingle':
+                $color = '#28a745'; // Green
+                $typeLabel = 'Jingle';
+                break;
+            case 'lpm':
+                $color = '#007bff'; // Blue
+                $typeLabel = 'LPM';
+                break;
+            case 'talkshow':
+                $color = '#fd7e14'; // Orange
+                $typeLabel = 'Talkshow';
+                break;
+            default:
+                $color = '#6c757d'; // Gray
+                $typeLabel = 'Booking';
+        }
+        
+        // Adjust opacity for different statuses
+        if ($status === 'pending') {
+            $color = $color . 'CC'; // Add transparency
+        } elseif ($status === 'cancelled') {
+            $color = '#6c757d'; // Gray for cancelled
+        }
+        
+        $advertiserName = $session['company_name'] ?: $session['advertiser_name'];
+        $title = $typeLabel . ($advertiserName ? ' - ' . $advertiserName : '');
+        
+        $events[] = [
+            'id' => 'session_' . $session['id'],
+            'title' => $title,
+            'start' => $session['date'] . 'T' . $session['start_time'],
+            'end' => $session['date'] . 'T' . $session['end_time'],
+            'color' => $color,
+            'extendedProps' => [
+                'type' => 'booking_session',
+                'sessionId' => $session['id'],
+                'adType' => $adType,
+                'status' => $status,
+                'advertiser' => $advertiserName
+            ]
+        ];
+    }
+    
+    echo json_encode($events);
     
 } catch (Exception $e) {
-    // Log error (in production, use proper logging)
-    error_log("Slots API Error: " . $e->getMessage());
-    
-    // Return error response
     http_response_code(500);
     echo json_encode([
-        'error' => 'Failed to fetch slots',
-        'message' => 'An error occurred while retrieving slot data'
+        'error' => true,
+        'message' => 'Failed to fetch slots: ' . $e->getMessage()
     ]);
 }
 ?>

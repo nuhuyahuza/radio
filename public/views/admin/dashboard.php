@@ -56,6 +56,37 @@ ob_start();
 	</div>
 </div>
 
+<!-- Ad Type Statistics -->
+<div class="row mb-4">
+	<div class="col-xl-4 col-md-4 mb-4">
+		<div class="stats-card">
+			<div class="stats-icon" style="background: #28a745;">
+				<i class="fas fa-music"></i>
+			</div>
+			<div class="stats-number"><?= $stats['jingle_count'] ?? 0 ?></div>
+			<div class="stats-label">Jingle Campaigns</div>
+		</div>
+	</div>
+	<div class="col-xl-4 col-md-4 mb-4">
+		<div class="stats-card">
+			<div class="stats-icon" style="background: #007bff;">
+				<i class="fas fa-microphone"></i>
+			</div>
+			<div class="stats-number"><?= $stats['lpm_count'] ?? 0 ?></div>
+			<div class="stats-label">LPM Campaigns</div>
+		</div>
+	</div>
+	<div class="col-xl-4 col-md-4 mb-4">
+		<div class="stats-card">
+			<div class="stats-icon" style="background: #fd7e14;">
+				<i class="fas fa-comments"></i>
+			</div>
+			<div class="stats-number"><?= $stats['talkshow_count'] ?? 0 ?></div>
+			<div class="stats-label">Talkshow Campaigns</div>
+		</div>
+	</div>
+</div>
+
 <div class="row">
 	<!-- Recent Bookings -->
 	<div class="col-lg-8 mb-4">
@@ -71,10 +102,11 @@ ob_start();
 					<table class="table table-hover mb-0">
 						<thead>
 							<tr>
-								<th></th>
 								<th>ID</th>
+								<th>Type</th>
 								<th>Advertiser</th>
 								<th>Date & Time</th>
+								<th>Sessions</th>
 								<th>Amount</th>
 								<th>Status</th>
 								<th>Actions</th>
@@ -83,42 +115,71 @@ ob_start();
 						<tbody>
 							<?php if (!empty($recentBookings)): ?>
 							<?php foreach ($recentBookings as $booking): ?>
+							<?php
+							// Determine ad type badge
+							$adTypeBadge = '';
+							if (!empty($booking['ad_type'])) {
+								switch ($booking['ad_type']) {
+									case 'jingle':
+										$adTypeBadge = '<span class="badge" style="background: #28a745; color: white;"><i class="fas fa-music me-1"></i>Jingle</span>';
+										break;
+									case 'lpm':
+										$adTypeBadge = '<span class="badge" style="background: #007bff; color: white;"><i class="fas fa-microphone me-1"></i>LPM</span>';
+										break;
+									case 'talkshow':
+										$adTypeBadge = '<span class="badge" style="background: #fd7e14; color: white;"><i class="fas fa-comments me-1"></i>Talkshow</span>';
+										break;
+									default:
+										$adTypeBadge = '<span class="badge badge-secondary">Standard</span>';
+								}
+							} else {
+								$adTypeBadge = '<span class="badge badge-secondary">Standard</span>';
+							}
+							?>
 							<tr>
 								<td>#<?= $booking['id'] ?></td>
+								<td><?= $adTypeBadge ?></td>
 								<td>
 									<div>
 										<div class="fw-bold"><?= htmlspecialchars($booking['advertiser_name']) ?></div>
-										<small
-											class="text-muted"><?= htmlspecialchars($booking['advertiser_email']) ?></small>
+										<small class="text-muted"><?= htmlspecialchars($booking['advertiser_email']) ?></small>
 									</div>
 								</td>
 								<td>
 									<div>
-										<div><?= date('M j, Y', strtotime($booking['date'])) ?></div>
-										<small class="text-muted">
-											<?= date('g:i A', strtotime($booking['start_time'])) ?> -
-											<?= date('g:i A', strtotime($booking['end_time'])) ?>
-										</small>
+										<?php if (!empty($booking['ad_type']) && !empty($booking['campaign_start'])): ?>
+											<div class="fw-bold"><?= date('M j', strtotime($booking['campaign_start'])) ?> - <?= date('M j, Y', strtotime($booking['campaign_end'])) ?></div>
+											<small class="text-muted">Campaign</small>
+										<?php else: ?>
+											<div><?= date('M j, Y', strtotime($booking['date'])) ?></div>
+											<small class="text-muted">
+												<?= date('g:i A', strtotime($booking['start_time'])) ?> -
+												<?= date('g:i A', strtotime($booking['end_time'])) ?>
+											</small>
+										<?php endif; ?>
 									</div>
+								</td>
+								<td>
+									<span class="badge badge-info"><?= $booking['session_count'] ?? 1 ?> session<?= ($booking['session_count'] ?? 1) > 1 ? 's' : '' ?></span>
 								</td>
 								<td class="fw-bold">GH₵<?= number_format($booking['total_amount'], 2) ?></td>
 								<td>
 									<?php
-                                            $statusClass = '';
-                                            switch ($booking['status']) {
-                                                case 'pending':
-                                                    $statusClass = 'badge-warning';
-                                                    break;
-                                                case 'approved':
-                                                    $statusClass = 'badge-success';
-                                                    break;
-                                                case 'rejected':
-                                                    $statusClass = 'badge-danger';
-                                                    break;
-                                                default:
-                                                    $statusClass = 'badge-info';
-                                            }
-                                            ?>
+									$statusClass = '';
+									switch ($booking['status']) {
+										case 'pending':
+											$statusClass = 'badge-warning';
+											break;
+										case 'approved':
+											$statusClass = 'badge-success';
+											break;
+										case 'rejected':
+											$statusClass = 'badge-danger';
+											break;
+										default:
+											$statusClass = 'badge-info';
+									}
+									?>
 									<span class="badge <?= $statusClass ?>">
 										<?= ucfirst($booking['status']) ?>
 									</span>
@@ -133,7 +194,7 @@ ob_start();
 							<?php endforeach; ?>
 							<?php else: ?>
 							<tr>
-								<td colspan="6" class="text-center text-muted py-4">
+								<td colspan="8" class="text-center text-muted py-4">
 									<i class="fas fa-inbox fa-2x mb-2"></i>
 									<div>No recent bookings</div>
 								</td>
