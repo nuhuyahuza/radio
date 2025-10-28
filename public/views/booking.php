@@ -789,12 +789,28 @@ use App\Utils\Session;
 			height: 'auto',
 			dayMaxEvents: 3,
 			moreLinkClick: 'popover',
-			eventDidMount: function(info) {
-				// Events already have colors from the API
+			dateClick: function(info) {
+				const date = new Date(info.dateStr);
+				const today = new Date();
+				today.setHours(0, 0, 0, 0);
+
+				if (date < today) {
+					alert('Cannot book slots for past dates.');
+					return;
+				}
+
+				// Open campaign booking modal
+				openCampaignBooking();
 			},
 			eventClick: function(info) {
-				// Don't open modal on event click for now - let users click dates instead
-				info.jsEvent.preventDefault();
+				// For now, clicking on events also opens the booking modal
+				// You can customize this to show event details instead
+				openCampaignBooking();
+			},
+			eventDidMount: function(info) {
+				// Events already have colors from the API
+				// Add cursor pointer for better UX
+				info.el.style.cursor = 'pointer';
 			},
 			loading: function(isLoading) {
 				if (isLoading) {
@@ -1119,11 +1135,6 @@ use App\Utils\Session;
 	if (urlParams.get('open') === 'campaign') {
 		setTimeout(() => openCampaignBooking(), 500);
 	}
-
-	// Calendar click to open campaign booking
-	calendar.on('dateClick', function(info) {
-		openCampaignBooking();
-	});
 	</script>
 </body>
 
