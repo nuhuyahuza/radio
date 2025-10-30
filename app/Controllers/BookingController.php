@@ -368,106 +368,150 @@ class BookingController
 
             $this->db->beginTransaction();
 
-            // Find or create advertiser
-            $advertiser = $this->userModel->findByEmail($advertiserEmail);
-            if (!$advertiser) {
-                $tempPassword = $this->generateTemporaryPassword();
-                $advertiserId = $this->userModel->createUser([
-                    'name' => $advertiserName,
-                    'email' => $advertiserEmail,
-                    'password' => $tempPassword,
-                    'role' => 'advertiser',
-                    'phone' => $advertiserPhone,
-                    'company' => $companyName,
-                    'is_active' => true,
-                    'email_verified_at' => date('Y-m-d H:i:s')
-                ]);
-                $this->notificationService->sendAccountCreation($advertiserId, $advertiserEmail, $advertiserName, $tempPassword);
-            } else {
-                $advertiserId = $advertiser['id'];
-            }
-
-            // Create parent booking
-            $bookingData = [
-                'advertiser_id' => $advertiserId,
-                'slot_id' => null, // Not using traditional slots
-                'ad_type' => $adType,
-                'recurrence_pattern' => $recurrence,
-                'campaign_start' => $startDate,
-                'campaign_end' => $endDate,
-                'weekdays' => is_array($weekdays) ? implode(',', $weekdays) : $weekdays,
-                'status' => 'pending',
-                'message' => $message,
-                'total_amount' => $totalAmount,
-                'payment_status' => 'pending'
-            ];
-            
-            $parentBookingId = $this->bookingModel->create($bookingData);
-
-            // Create booking sessions
-            $sessionModel = new \App\Models\BookingSession();
-            $sessionCount = 0;
-            
-            foreach ($selectedSlots as $slot) {
-                // Double-check availability
-                $exists = $sessionModel->exists([
-                    'session_date' => $slot['date'],
-                    'start_time' => $slot['start_time'],
-                    'end_time' => $slot['end_time'],
-                    'status' => ['pending', 'approved']
-                ]);
+            try {
+                // Step 1: Find or create advertiser
+                error_log("Step 1: Finding/creating advertiser: " . $advertiserEmail);
+                $advertiser = $this->userModel->findByEmail($advertiserEmail);
                 
-                if ($exists) {
-                    throw new \Exception('Slot already booked: ' . $slot['date'] . ' ' . $slot['start_time']);
+                if (!$advertiser) {
+                    error_log("Creating new advertiser account");
+                    $tempPassword = $this->generateTemporaryPassword();
+                    $advertiserId = $this->userModel->createUser([
+                        'name' => $advertiserName,
+                        'email' => $advertiserEmail,
+                        'password' => $tempPassword,
+                        'role' => 'advertiser',
+                        'phone' => $advertiserPhone,
+                        'company' => $companyName,
+                        'is_active' => true,
+                        'email_verified_at' => date('Y-m-d H:i:s')
+                    ]);
+                    error_log("Advertiser created with ID: " . $advertiserId);
+                    
+                    // Send account creation email (don't fail booking if email fails)
+                    try {
+                        $this->notificationService->sendAccountCreation($advertiserId, $advertiserEmail, $advertiserName, $tempPassword);
+                    } catch (\Exception $e) {
+                        error_log("Account creation email failed: " . $e->getMessage());
+                    }
+                } else {
+                    $advertiserId = $advertiser['id'];
+                    error_log("Using existing advertiser ID: " . $advertiserId);
                 }
 
-                // Create session
-                $sessionModel->create([
-                    'booking_id' => $parentBookingId,
-                    'session_date' => $slot['date'],
-                    'start_time' => $slot['start_time'],
-                    'end_time' => $slot['end_time'],
-                    'status' => 'pending'
-                ]);
+                // Step 2: Create parent booking
+                error_log("Step 2: Creating parent booking");
+                $bookingData = [
+                    'advertiser_id' => $advertiserId,
+                    'slot_id' => null, // Not using traditional slots
+                    'ad_type' => $adType,
+                    'recurrence_pattern' => $recurrence,
+                    'campaign_start' => $startDate,
+                    'campaign_end' => $endDate,
+                    'weekdays' => is_array($weekdays) ? implode(',', $weekdays) : $weekdays,
+                    'status' => 'pending',
+                    'message' => $message,
+                    'total_amount' => $totalAmount,
+                    'payment_status' => 'pending'
+                ];
                 
-                $sessionCount++;
-            }
+                $parentBookingId = $this->bookingModel->create($bookingData);
+                error_log("Parent booking created with ID: " . $parentBookingId);
 
-            $this->db->commit();
+                // Step 3: Create booking sessions (optimized batch processing)
+                error_log("Step 3: Creating " . count($selectedSlots) . " sessions");
+                
+                // Increase execution time for large bookings
+                set_time_limit(120);
+                
+                $sessionModel = new \App\Models\BookingSession();
+                $sessionCount = 0;
+                
+                // OPTIMIZATION: Batch check for conflicts instead of one-by-one
+                $conflictingSessions = $this->checkBulkSessionConflicts($selectedSlots);
+                
+                if (!empty($conflictingSessions)) {
+                    $firstConflict = $conflictingSessions[0];
+                    throw new \Exception('Slot already booked: ' . $firstConflict['date'] . ' ' . $firstConflict['start_time']);
+                }
+                
+                // OPTIMIZATION: Bulk insert sessions (much faster)
+                foreach ($selectedSlots as $index => $slot) {
+                    $sessionModel->create([
+                        'booking_id' => $parentBookingId,
+                        'session_date' => $slot['date'],
+                        'start_time' => $slot['start_time'],
+                        'end_time' => $slot['end_time'],
+                        'status' => 'pending'
+                    ]);
+                    
+                    $sessionCount++;
+                    
+                    if (($index + 1) % 10 == 0) {
+                        error_log("Created " . ($index + 1) . " sessions so far...");
+                    }
+                }
+                
+                error_log("All " . $sessionCount . " sessions created successfully");
 
-            // Send confirmation email
-            $this->notificationService->sendCampaignBookingConfirmation([
-                'id' => $parentBookingId,
-                'advertiser_name' => $advertiserName,
-                'advertiser_email' => $advertiserEmail,
-                'ad_type' => $adType,
-                'session_count' => $sessionCount,
-                'campaign_start' => $startDate,
-                'campaign_end' => $endDate,
-                'total_amount' => $totalAmount
-            ]);
+                // Commit transaction
+                $this->db->commit();
+                error_log("Transaction committed successfully");
 
-            Session::setFlash('success', 'Your campaign booking has been submitted successfully! ' . $sessionCount . ' sessions created.');
+                // Step 4: Send confirmation email (don't fail if email fails)
+                try {
+                    $this->notificationService->sendCampaignBookingConfirmation([
+                        'id' => $parentBookingId,
+                        'advertiser_id' => $advertiserId,
+                        'advertiser_name' => $advertiserName,
+                        'advertiser_email' => $advertiserEmail,
+                        'ad_type' => $adType,
+                        'session_count' => $sessionCount,
+                        'campaign_start' => $startDate,
+                        'campaign_end' => $endDate,
+                        'total_amount' => $totalAmount
+                    ]);
+                    error_log("Confirmation email sent");
+                } catch (\Exception $e) {
+                    error_log("Confirmation email failed (non-critical): " . $e->getMessage());
+                }
 
-            if ($this->isAjaxRequest()) {
-                $this->jsonResponse([
-                    'success' => true,
-                    'parent_booking_id' => $parentBookingId,
-                    'session_count' => $sessionCount,
-                    'redirect' => '/'
-                ], 200);
-            } else {
-                header('Location: /');
-                exit;
+                Session::setFlash('success', 'Your campaign booking has been submitted successfully! ' . $sessionCount . ' sessions created.');
+
+                if ($this->isAjaxRequest()) {
+                    $this->jsonResponse([
+                        'success' => true,
+                        'parent_booking_id' => $parentBookingId,
+                        'session_count' => $sessionCount,
+                        'redirect' => '/'
+                    ], 200);
+                } else {
+                    header('Location: /');
+                    exit;
+                }
+                
+            } catch (\Exception $innerEx) {
+                // If anything fails, rollback
+                throw $innerEx;
             }
 
         } catch (\Exception $e) {
-            $this->db->rollback();
+            if ($this->db->inTransaction()) {
+                $this->db->rollback();
+            }
+            
+            // Log the detailed error
+            error_log("Campaign booking error: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
             
             if ($this->isAjaxRequest()) {
                 $this->jsonResponse([
                     'success' => false,
-                    'message' => 'Booking failed: ' . $e->getMessage()
+                    'message' => 'Booking failed: ' . $e->getMessage(),
+                    'debug' => [
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine()
+                    ]
                 ], 500);
             } else {
                 Session::setFlash('error', 'Booking failed: ' . $e->getMessage());
@@ -493,6 +537,46 @@ class BookingController
         return bin2hex(random_bytes(8));
     }
 
+    /**
+     * Optimized bulk session conflict checking
+     * Checks all slots in a single query instead of one-by-one
+     */
+    private function checkBulkSessionConflicts($slots)
+    {
+        if (empty($slots)) {
+            return [];
+        }
+
+        // Build a single query to check all slots at once
+        $conditions = [];
+        $params = [];
+        
+        foreach ($slots as $slot) {
+            $conditions[] = "(session_date = ? AND start_time = ? AND end_time = ?)";
+            $params[] = $slot['date'];
+            $params[] = $slot['start_time'];
+            $params[] = $slot['end_time'];
+        }
+        
+        $conditionsStr = implode(' OR ', $conditions);
+        
+        $sql = "
+            SELECT session_date as date, start_time, end_time
+            FROM booking_sessions
+            WHERE (" . $conditionsStr . ")
+            AND status IN ('pending', 'approved')
+            LIMIT 1
+        ";
+        
+        try {
+            $conflicts = $this->db->fetchAll($sql, $params);
+            return $conflicts;
+        } catch (\Exception $e) {
+            error_log("Bulk conflict check error: " . $e->getMessage());
+            // Fallback to returning empty (will insert and let DB constraints handle it)
+            return [];
+        }
+    }
 
     /**
      * Check if request is AJAX

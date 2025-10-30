@@ -5,8 +5,9 @@ use App\Database\Database;
 class BookingSession extends BaseModel {
     protected $table = 'booking_sessions';
     protected $fillable = [
-        'booking_id', 'session_date', 'start_time', 'end_time', 'status', 'created_at', 'updated_at',
+        'booking_id', 'session_date', 'start_time', 'end_time', 'status'
     ];
+    
     public function findByBooking($bookingId) {
         return $this->where('booking_id', $bookingId);
     }

@@ -1,0 +1,37 @@
+# PHP Configuration for Booking System
+# Increase timeouts for campaign bookings
+
+# Increase execution time (60 seconds default, 120 for bookings)
+php_value max_execution_time 120
+
+# Increase input time
+php_value max_input_time 120
+
+# Increase memory limit
+php_value memory_limit 256M
+
+# Enable error logging
+php_flag display_errors Off
+php_flag log_errors On
+
+# Rewrite rules for clean URLs
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /radio/
+    
+    # Skip real files and directories
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    
+    # Route to index.php
+    RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+

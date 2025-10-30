@@ -799,18 +799,47 @@ use App\Utils\Session;
 					return;
 				}
 
-				// Open campaign booking modal
-				openCampaignBooking();
+				// Open campaign booking modal and pre-fill the clicked date
+				openCampaignBooking(info.dateStr);
 			},
 			eventClick: function(info) {
-				// For now, clicking on events also opens the booking modal
-				// You can customize this to show event details instead
-				openCampaignBooking();
+				// Check if this is a booked session
+				const eventType = info.event.extendedProps.type;
+				
+				if (eventType === 'booking_session') {
+					// This is an existing booking - show details instead of allowing new booking
+					const sessionInfo = info.event.extendedProps;
+					const startTime = info.event.start.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'});
+					const endTime = info.event.end.toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'});
+					alert(`📅 Booked Session\n\n${info.event.title}\n\nDate: ${formatDate(info.event.startStr)}\nTime: ${startTime} - ${endTime}\n\nThis slot is already booked and unavailable.`);
+					return;
+				}
+				
+				// If it's an available slot, capture its date/time and open booking modal
+				if (eventType === 'slot' && info.event.extendedProps.status === 'available') {
+					// Store base date/time from the clicked slot
+					window.preSelectedDate = info.event.startStr.substring(0, 10);
+					const start = info.event.start;
+					const end = info.event.end;
+					const toHms = (d) => `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:00`;
+					window.preSelectedStartTime = toHms(start);
+					window.preSelectedEndTime = toHms(end);
+					openCampaignBooking(window.preSelectedDate);
+				}
 			},
 			eventDidMount: function(info) {
 				// Events already have colors from the API
-				// Add cursor pointer for better UX
-				info.el.style.cursor = 'pointer';
+				const eventType = info.event.extendedProps.type;
+				
+				if (eventType === 'booking_session') {
+					// Booked sessions - show as non-clickable
+					info.el.style.cursor = 'not-allowed';
+					info.el.style.opacity = '0.9';
+					info.el.title = 'This slot is booked';
+				} else {
+					// Available slots - clickable
+					info.el.style.cursor = 'pointer';
+				}
 			},
 			loading: function(isLoading) {
 				if (isLoading) {
@@ -831,14 +860,62 @@ use App\Utils\Session;
 		});
 	});
 
-	function openCampaignBooking() {
+	function openCampaignBooking(selectedDate = null) {
 		bookingModal.show();
 		goToStep(1);
+		
+		// Pre-fill the date if one was clicked
+		if (selectedDate) {
+			// Store for later use when ad type is selected
+			window.preSelectedDate = selectedDate;
+			console.log('Pre-selected date:', selectedDate);
+		}
 	}
 
 	function selectAdType(type) {
 		selectedAdType = type;
 		document.getElementById('ad_type').value = type;
+		
+		// Pre-fill dates if a date was clicked on calendar
+		if (window.preSelectedDate) {
+			const dateFields = {
+				'jingle': ['jingle_start_date', 'jingle_end_date'],
+				'lpm': ['lpm_start_date', 'lpm_end_date'],
+				'talkshow': ['talkshow_start_date', 'talkshow_end_date']
+			};
+			
+			const fieldsToFill = dateFields[type] || [];
+			fieldsToFill.forEach(fieldId => {
+				const field = document.getElementById(fieldId);
+				if (field && !field.value) {
+					field.value = window.preSelectedDate;
+				}
+			});
+			
+			// Also pre-fill time range for LPM/Talkshow using clicked slot times
+			if (window.preSelectedStartTime && window.preSelectedEndTime) {
+				const toHm = (hms) => hms ? hms.substring(0,5) : '';
+				if (type === 'lpm') {
+					const st = document.getElementById('lpm_start_time');
+					const et = document.getElementById('lpm_end_time');
+					if (st && !st.value) st.value = toHm(window.preSelectedStartTime);
+					if (et && !et.value) et.value = toHm(window.preSelectedEndTime);
+					const rec = document.getElementById('lpm_recurrence');
+					if (rec && !rec.value) rec.value = 'daily';
+				}
+				if (type === 'talkshow') {
+					const st = document.getElementById('talkshow_start_time');
+					const et = document.getElementById('talkshow_end_time');
+					if (st && !st.value) st.value = toHm(window.preSelectedStartTime);
+					if (et && !et.value) et.value = toHm(window.preSelectedEndTime);
+					const rec = document.getElementById('talkshow_recurrence');
+					if (rec && !rec.value) rec.value = 'daily';
+				}
+			}
+			
+			console.log('Pre-filled date/time fields for', type, 'with', window.preSelectedDate, window.preSelectedStartTime, window.preSelectedEndTime);
+		}
+		
 		goToStep(2);
 	}
 
@@ -950,8 +1027,10 @@ use App\Utils\Session;
 		} else if (selectedAdType === 'lpm') {
 			requestData.start_date = document.getElementById('lpm_start_date').value;
 			requestData.end_date = document.getElementById('lpm_end_date').value;
-			requestData.start_time = document.getElementById('lpm_start_time').value + ':00';
-			requestData.end_time = document.getElementById('lpm_end_time').value + ':00';
+			const lpmStart = document.getElementById('lpm_start_time').value;
+			const lpmEnd = document.getElementById('lpm_end_time').value;
+			requestData.start_time = (lpmStart ? (lpmStart + ':00') : (window.preSelectedStartTime || ''));
+			requestData.end_time = (lpmEnd ? (lpmEnd + ':00') : (window.preSelectedEndTime || ''));
 			requestData.recurrence = document.getElementById('lpm_recurrence').value;
 
 			if (requestData.recurrence === 'weekdays') {
@@ -961,8 +1040,10 @@ use App\Utils\Session;
 		} else if (selectedAdType === 'talkshow') {
 			requestData.start_date = document.getElementById('talkshow_start_date').value;
 			requestData.end_date = document.getElementById('talkshow_end_date').value;
-			requestData.start_time = document.getElementById('talkshow_start_time').value + ':00';
-			requestData.end_time = document.getElementById('talkshow_end_time').value + ':00';
+			const tsStart = document.getElementById('talkshow_start_time').value;
+			const tsEnd = document.getElementById('talkshow_end_time').value;
+			requestData.start_time = (tsStart ? (tsStart + ':00') : (window.preSelectedStartTime || ''));
+			requestData.end_time = (tsEnd ? (tsEnd + ':00') : (window.preSelectedEndTime || ''));
 			requestData.recurrence = document.getElementById('talkshow_recurrence').value;
 
 			if (requestData.recurrence === 'weekly') {
@@ -981,7 +1062,8 @@ use App\Utils\Session;
 		fetch('/api/slots/check-availability', {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json'
+					'Content-Type': 'application/json',
+					'X-Requested-With': 'XMLHttpRequest'
 				},
 				body: JSON.stringify(requestData)
 			})
@@ -1075,11 +1157,26 @@ use App\Utils\Session;
 		fetch('/booking/confirm', {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json'
+					'Content-Type': 'application/json',
+					'X-Requested-With': 'XMLHttpRequest'
 				},
 				body: JSON.stringify(bookingData)
 			})
-			.then(res => res.json())
+			.then(async (res) => {
+				const contentType = res.headers.get('content-type') || '';
+				let payload;
+				try {
+					if (contentType.includes('application/json')) {
+						payload = await res.json();
+					} else {
+						const text = await res.text();
+						payload = { success: false, message: 'Unexpected response from server', debug: { status: res.status, contentType, text } };
+					}
+				} catch (e) {
+					payload = { success: false, message: 'Failed to parse server response', debug: { status: res.status, error: e?.message } };
+				}
+				return payload;
+			})
 			.then(data => {
 				document.getElementById('bookingLoading').style.display = 'none';
 
@@ -1088,27 +1185,56 @@ use App\Utils\Session;
 					calendar.refetchEvents();
 
 					alert(
-						`Success! Your campaign has been booked with ${data.session_count} sessions. Check your email for confirmation.`
+						`✅ Success! Your campaign has been booked with ${data.session_count} sessions. Check your email for confirmation.`
 					);
 
 					// Reset form
 					document.getElementById('campaignBookingForm').reset();
 					selectedJingleTimes = [];
 					previewedSlots = [];
+					window.preSelectedDate = null; // Clear pre-selected date
 
 					if (data.redirect) {
 						window.location.href = data.redirect;
 					}
 				} else {
 					document.getElementById('step3').style.display = 'block';
-					alert('Booking failed: ' + data.message);
+					
+					// Show detailed error message
+					let errorMsg = '❌ Booking Failed:\n\n' + (data.message || 'Unknown error');
+					
+					// Add debug info if available
+					if (data.debug) {
+						errorMsg += '\n\n📍 Error Details:';
+						if (data.debug.status) errorMsg += '\nStatus: ' + data.debug.status;
+						if (data.debug.file) {
+							const fileName = data.debug.file.split('/').pop();
+							errorMsg += '\nFile: ' + fileName;
+						}
+						if (data.debug.line) errorMsg += '\nLine: ' + data.debug.line;
+						if (data.debug.contentType) errorMsg += '\nContent-Type: ' + data.debug.contentType;
+						if (data.debug.text) errorMsg += '\n\nResponse:\n' + (data.debug.text.slice(0, 400) + (data.debug.text.length > 400 ? '... (truncated)' : ''));
+					}
+					
+					// Add helpful hints based on error message
+					if (data.message && data.message.includes('already booked')) {
+						errorMsg += '\n\n💡 Tip: This time slot is already booked. Please:';
+						errorMsg += '\n• Choose a different date/time';
+						errorMsg += '\n• Refresh the calendar to see current availability';
+					} else if (data.message && data.message.includes('security token')) {
+						errorMsg += '\n\n💡 Tip: Your session may have expired. Please refresh the page and try again.';
+					}
+					
+					alert(errorMsg);
+					console.error('Booking Error:', data);
 				}
 			})
 			.catch(err => {
 				document.getElementById('bookingLoading').style.display = 'none';
 				document.getElementById('step3').style.display = 'block';
-				alert('Booking failed. Please try again.');
-				console.error(err);
+				
+				alert('❌ Booking Failed:\n\nNetwork error or server timeout. Please try again.\n\nIf the problem persists, contact support.');
+				console.error('Booking Error:', err);
 			});
 	}
 

@@ -211,6 +211,14 @@ abstract class BaseModel
     }
 
     /**
+     * Get fillable fields
+     */
+    public function getFillable()
+    {
+        return $this->fillable;
+    }
+
+    /**
      * Check if record(s) exist for given condition(s)
      */
     public function exists($conditions) {

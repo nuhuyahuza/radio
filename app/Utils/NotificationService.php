@@ -228,7 +228,8 @@ class NotificationService
             $this->emailService->send(
                 $bookingData['advertiser_email'],
                 $subject,
-                $message
+                $message,
+                $bookingData['advertiser_name'] ?? null
             );
             
         } catch (\Exception $e) {

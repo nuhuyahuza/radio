@@ -12,16 +12,19 @@
 5. Click "Go"
 
 ```sql
--- Add ad_type and campaign fields to bookings table
-ALTER TABLE bookings
-  ADD COLUMN ad_type ENUM('jingle','lpm','talkshow') DEFAULT NULL AFTER slot_id,
-  ADD COLUMN recurrence_pattern VARCHAR(32) DEFAULT NULL AFTER ad_type,
-  ADD COLUMN campaign_start DATE DEFAULT NULL AFTER recurrence_pattern,
-  ADD COLUMN campaign_end DATE DEFAULT NULL AFTER campaign_start,
-  ADD COLUMN frequency_per_day INT DEFAULT NULL AFTER campaign_end,
-  ADD COLUMN weekdays VARCHAR(32) DEFAULT NULL AFTER frequency_per_day;
+-- Step 1: Make slot_id nullable (campaign bookings don't use traditional slots)
+ALTER TABLE bookings 
+  MODIFY COLUMN slot_id INT DEFAULT NULL;
 
--- Create booking_sessions table
+-- Step 2: Add ad_type and campaign fields to bookings table
+ALTER TABLE bookings ADD COLUMN ad_type ENUM('jingle','lpm','talkshow') DEFAULT NULL;
+ALTER TABLE bookings ADD COLUMN recurrence_pattern VARCHAR(32) DEFAULT NULL;
+ALTER TABLE bookings ADD COLUMN campaign_start DATE DEFAULT NULL;
+ALTER TABLE bookings ADD COLUMN campaign_end DATE DEFAULT NULL;
+ALTER TABLE bookings ADD COLUMN frequency_per_day INT DEFAULT NULL;
+ALTER TABLE bookings ADD COLUMN weekdays VARCHAR(32) DEFAULT NULL;
+
+-- Step 3: Create booking_sessions table
 CREATE TABLE IF NOT EXISTS booking_sessions (
   id INT AUTO_INCREMENT PRIMARY KEY,
   booking_id INT NOT NULL,

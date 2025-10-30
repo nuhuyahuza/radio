@@ -524,6 +524,24 @@ class EmailService
     }
 
     /**
+     * Generic method to send email with HTML content
+     */
+    public function send($toEmail, $subject, $htmlBody, $toName = null)
+    {
+        try {
+            $this->mailer->clearAddresses();
+            $this->mailer->addAddress($toEmail, $toName ?? $toEmail);
+            $this->mailer->Subject = $subject;
+            $this->mailer->Body = $htmlBody;
+            $this->mailer->send();
+            return true;
+        } catch (MailerException $e) {
+            error_log("Generic email send error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Get slot reminder email template
      */
     private function getSlotReminderTemplate($slotData)
