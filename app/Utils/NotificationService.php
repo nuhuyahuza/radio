@@ -242,17 +242,34 @@ class NotificationService
      */
     public function sendBookingApproval($bookingData)
     {
+        // Handle both traditional and campaign bookings
+        $isCampaign = !empty($bookingData['ad_type']);
+        
+        if ($isCampaign) {
+            $message = "Your {$bookingData['ad_type']} campaign booking has been approved with " . ($bookingData['session_count'] ?? 0) . " scheduled sessions.";
+            $data = [
+                'booking_id' => $bookingData['id'],
+                'ad_type' => $bookingData['ad_type'],
+                'campaign_start' => $bookingData['campaign_start'] ?? null,
+                'campaign_end' => $bookingData['campaign_end'] ?? null,
+                'session_count' => $bookingData['session_count'] ?? 0
+            ];
+        } else {
+            $message = 'Your booking has been approved and is confirmed for broadcast.';
+            $data = [
+                'booking_id' => $bookingData['id'],
+                'slot_date' => $bookingData['date'] ?? null,
+                'slot_time' => ($bookingData['start_time'] ?? '') . ' - ' . ($bookingData['end_time'] ?? '')
+            ];
+        }
+        
         // Create database notification
         $this->createNotification(
-            $bookingData['advertiser_id'],
+            $bookingData['advertiser_id'] ?? null,
             'booking_approved',
             'Booking Approved',
-            'Your booking has been approved and is confirmed for broadcast.',
-            [
-                'booking_id' => $bookingData['id'],
-                'slot_date' => $bookingData['date'],
-                'slot_time' => $bookingData['start_time'] . ' - ' . $bookingData['end_time']
-            ]
+            $message,
+            $data
         );
 
         // Send email notification

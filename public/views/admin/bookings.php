@@ -699,18 +699,32 @@ function renderBookings(bookings) {
                 <div class="d-flex flex-column">
                     <span class="fw-semibold">
                         <i class="fas fa-calendar me-1 text-muted"></i>${formatDate(booking.date)}
+                        ${booking.end_date ? ` - ${formatDate(booking.end_date)}` : ''}
                     </span>
                     <small class="text-muted">
-                        <i class="fas fa-clock me-1"></i>
-                        ${formatTime(booking.start_time)} - ${formatTime(booking.end_time)}
+                        ${booking.ad_type ? `
+                            <i class="fas fa-bullhorn me-1"></i>
+                            <span class="badge bg-${booking.ad_type === 'jingle' ? 'success' : booking.ad_type === 'lpm' ? 'info' : 'warning'}">${booking.ad_type.toUpperCase()}</span>
+                            ${booking.session_count} sessions
+                        ` : `
+                            <i class="fas fa-clock me-1"></i>
+                            ${formatTime(booking.start_time)} - ${formatTime(booking.end_time)}
+                        `}
                     </small>
                 </div>
             </td>
             <td class="align-middle text-center">
-                <span class="chip bg-info">
-                    <i class="fas fa-stopwatch"></i>
-                    ${booking.duration} min
-                </span>
+                ${booking.ad_type ? `
+                    <span class="chip bg-info">
+                        <i class="fas fa-calendar-check"></i>
+                        ${booking.session_count} sessions
+                    </span>
+                ` : `
+                    <span class="chip bg-info">
+                        <i class="fas fa-stopwatch"></i>
+                        ${booking.duration} min
+                    </span>
+                `}
             </td>
             <td class="align-middle text-end">
                 <span class="fw-bold text-success h6 mb-0">${formatAmount(booking.total_amount)}</span>
@@ -1134,7 +1148,7 @@ function getStatusBadge(status) {
 		'rejected': '<span class="chip bg-danger"><span class="status-indicator rejected"></span>Rejected</span>',
 		'cancelled': '<span class="chip bg-secondary"><span class="status-indicator cancelled"></span>Cancelled</span>'
 	};
-	return badges[status] || `<span class="chip bg-info"><span class="status-indicator"></span>GH₵{status}</span>`;
+	return badges[status] || `<span class="chip bg-info"><span class="status-indicator"></span>${status}</span>`;
 }
 
 function escapeHtml(text) {
@@ -1197,11 +1211,11 @@ function showConfirmDialog(title, message, type = 'primary', onConfirm) {
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">GH₵{title}</h5>
+                    <h5 class="modal-title">${title}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>GH₵{message}</p>
+                    <p>${message}</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

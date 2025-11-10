@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Utils\Session;
 use App\Utils\NotificationService;
 use App\Middleware\AuthMiddleware;
+use App\Database\Database;
 
 /**
  * Booking Management Controller
@@ -485,28 +486,112 @@ class BookingManagementController
             $offset = ($page - 1) * $limit;
             
             // Get filters
-            $filters = [
-                'status' => $_GET['status'] ?? null,
-                'date' => $_GET['date'] ?? null,
-                'advertiser' => $_GET['advertiser'] ?? null,
-                'amount' => $_GET['amount'] ?? null
-            ];
+            $status = $_GET['status'] ?? null;
+            $adType = $_GET['ad_type'] ?? null;
             
-            // Remove empty filters
-            $filters = array_filter($filters, function($value) {
-                return !empty($value);
-            });
+            // Build query with filters
+            $whereClauses = [];
+            $params = [];
             
-            // For now, return sample data since we don't have real bookings
-            $sampleBookings = $this->getSampleBookings($page, $limit, $filters);
+            if ($status && $status !== 'all') {
+                $whereClauses[] = "b.status = ?";
+                $params[] = $status;
+            }
+            
+            if ($adType && $adType !== 'all') {
+                if ($adType === 'traditional') {
+                    $whereClauses[] = "b.slot_id IS NOT NULL";
+                } else {
+                    $whereClauses[] = "b.ad_type = ?";
+                    $params[] = $adType;
+                }
+            }
+            
+            $whereSql = !empty($whereClauses) ? "WHERE " . implode(" AND ", $whereClauses) : "";
+            
+            $db = Database::getInstance();
+            
+            // Get total count
+            $countSql = "
+                SELECT COUNT(*) as total
+                FROM bookings b
+                {$whereSql}
+            ";
+            $totalResult = $db->fetch($countSql, $params);
+            $total = $totalResult['total'] ?? 0;
+            
+            // Get bookings
+            $sql = "
+                SELECT 
+                    b.*,
+                    s.date,
+                    s.start_time,
+                    s.end_time,
+                    s.price,
+                    COALESCE(st.name, (SELECT name FROM stations LIMIT 1), 'Zaa Radio') as station_name,
+                    u.name as advertiser_name,
+                    u.email as advertiser_email,
+                    u.company as advertiser_company,
+                    approver.name as approved_by_name,
+                    (SELECT COUNT(*) FROM booking_sessions WHERE booking_id = b.id) as session_count,
+                    CASE 
+                        WHEN b.ad_type IS NOT NULL THEN b.ad_type
+                        ELSE 'traditional'
+                    END as booking_type
+                FROM bookings b
+                LEFT JOIN slots s ON b.slot_id = s.id
+                LEFT JOIN stations st ON s.station_id = st.id
+                JOIN users u ON b.advertiser_id = u.id
+                LEFT JOIN users approver ON b.approved_by = approver.id
+                {$whereSql}
+                ORDER BY b.created_at DESC
+                LIMIT ? OFFSET ?
+            ";
+            
+            $params[] = $limit;
+            $params[] = $offset;
+            
+            $bookings = $db->fetchAll($sql, $params);
+            
+            // Format bookings for frontend
+            $formattedBookings = [];
+            foreach ($bookings as $booking) {
+                // For campaign bookings, show campaign period and session count
+                $isCampaign = !empty($booking['ad_type']);
+                $sessionCount = (int)($booking['session_count'] ?? ($booking['slot_id'] ? 1 : 0));
+                
+                $formattedBookings[] = [
+                    'id' => $booking['id'],
+                    'advertiser_name' => $booking['advertiser_name'],
+                    'advertiser_email' => $booking['advertiser_email'],
+                    'date' => $isCampaign ? ($booking['campaign_start'] ?? 'N/A') : ($booking['date'] ?? 'N/A'),
+                    'end_date' => $isCampaign ? ($booking['campaign_end'] ?? null) : null,
+                    'start_time' => $isCampaign ? 'Multiple' : ($booking['start_time'] ?? 'N/A'),
+                    'end_time' => $isCampaign ? 'Sessions' : ($booking['end_time'] ?? 'N/A'),
+                    'duration' => $isCampaign ? $sessionCount . ' sessions' : ($booking['duration'] ?? 'N/A'),
+                    'total_amount' => (float)($booking['total_amount'] ?? 0),
+                    'status' => $booking['status'],
+                    'ad_type' => $booking['ad_type'] ?? null,
+                    'booking_type' => $booking['booking_type'],
+                    'session_count' => $sessionCount,
+                    'station_name' => $booking['station_name'] ?? 'Zaa Radio',
+                    'created_at' => $booking['created_at']
+                ];
+            }
             
             echo json_encode([
                 'success' => true,
-                'bookings' => $sampleBookings['bookings'],
-                'pagination' => $sampleBookings['pagination']
+                'bookings' => $formattedBookings,
+                'pagination' => [
+                    'current_page' => $page,
+                    'per_page' => $limit,
+                    'total' => $total,
+                    'total_pages' => ceil($total / $limit)
+                ]
             ]);
             
         } catch (\Exception $e) {
+            error_log("Get bookings data error: " . $e->getMessage());
             http_response_code(500);
             echo json_encode([
                 'success' => false,
@@ -522,14 +607,66 @@ class BookingManagementController
     {
         AuthMiddleware::requireRole('admin');
         header('Content-Type: application/json');
-        $input = json_decode(file_get_contents('php://input'), true);
-        $status = $input['status'] ?? null;
-        if (!in_array($status, ['approved', 'rejected'])) {
-            echo json_encode(['success' => false, 'message' => 'Invalid status']);
-            return;
+        
+        try {
+            // Validate CSRF token from header
+            $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+            if (!Session::verifyCsrfToken($csrfToken)) {
+                echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+                return;
+            }
+            
+            $input = json_decode(file_get_contents('php://input'), true);
+            $status = $input['status'] ?? null;
+            
+            if (!in_array($status, ['approved', 'rejected', 'cancelled'])) {
+                echo json_encode(['success' => false, 'message' => 'Invalid status']);
+                return;
+            }
+            
+            $booking = $this->bookingModel->find($bookingId);
+            if (!$booking) {
+                echo json_encode(['success' => false, 'message' => 'Booking not found']);
+                return;
+            }
+            
+            $user = Session::getUser();
+            
+            if ($status === 'approved') {
+                $this->bookingModel->approve($bookingId, $user['id']);
+                $bookingDetails = $this->bookingModel->findWithDetails($bookingId);
+                
+                // Use campaign booking confirmation for campaign bookings
+                if (!empty($bookingDetails['ad_type'])) {
+                    $bookingDetails['session_count'] = $bookingDetails['session_count'] ?? 0;
+                    $this->notificationService->sendCampaignBookingConfirmation($bookingDetails);
+                } else {
+                    $this->notificationService->sendBookingApproval($bookingDetails);
+                }
+            } elseif ($status === 'rejected') {
+                $reason = $input['reason'] ?? null;
+                $this->bookingModel->reject($bookingId, $user['id'], $reason);
+                $bookingDetails = $this->bookingModel->findWithDetails($bookingId);
+                $this->notificationService->sendBookingRejection($bookingDetails, $reason);
+            } else {
+                // cancelled
+                $this->bookingModel->update($bookingId, ['status' => 'cancelled']);
+            }
+            
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Booking status updated successfully',
+                'status' => $status
+            ]);
+            
+        } catch (\Exception $e) {
+            error_log("Update booking status error: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'success' => false, 
+                'message' => 'Failed to update booking status: ' . $e->getMessage()
+            ]);
         }
-        // For demo, just return success (since we use sample data)
-        echo json_encode(['success' => true, 'message' => 'Booking status updated (demo)']);
     }
 
     /**

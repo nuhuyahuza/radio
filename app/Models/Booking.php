@@ -285,7 +285,7 @@ class Booking extends BaseModel
     }
 
     /**
-     * Find bookings with full details
+     * Find bookings with full details (handles both traditional and campaign bookings)
      */
     public function findWithDetails($bookingId)
     {
@@ -297,15 +297,16 @@ class Booking extends BaseModel
                 s.end_time,
                 s.price,
                 s.description as slot_description,
-                st.name as station_name,
+                COALESCE(st.name, (SELECT name FROM stations LIMIT 1), 'Zaa Radio') as station_name,
                 u.name as advertiser_name,
                 u.email as advertiser_email,
                 u.phone as advertiser_phone,
                 u.company as advertiser_company,
-                approver.name as approved_by_name
+                approver.name as approved_by_name,
+                (SELECT COUNT(*) FROM booking_sessions WHERE booking_id = b.id) as session_count
             FROM {$this->table} b
-            JOIN slots s ON b.slot_id = s.id
-            JOIN stations st ON s.station_id = st.id
+            LEFT JOIN slots s ON b.slot_id = s.id
+            LEFT JOIN stations st ON s.station_id = st.id
             JOIN users u ON b.advertiser_id = u.id
             LEFT JOIN users approver ON b.approved_by = approver.id
             WHERE b.id = ?
@@ -315,7 +316,7 @@ class Booking extends BaseModel
     }
 
     /**
-     * Find all bookings with details
+     * Find all bookings with details (handles both traditional and campaign bookings)
      */
     public function findAllWithDetails($limit = null, $offset = 0)
     {
@@ -326,14 +327,19 @@ class Booking extends BaseModel
                 s.start_time,
                 s.end_time,
                 s.price,
-                st.name as station_name,
+                COALESCE(st.name, (SELECT name FROM stations LIMIT 1), 'Zaa Radio') as station_name,
                 u.name as advertiser_name,
                 u.email as advertiser_email,
                 u.company as advertiser_company,
-                approver.name as approved_by_name
+                approver.name as approved_by_name,
+                (SELECT COUNT(*) FROM booking_sessions WHERE booking_id = b.id) as session_count,
+                CASE 
+                    WHEN b.ad_type IS NOT NULL THEN b.ad_type
+                    ELSE 'traditional'
+                END as booking_type
             FROM {$this->table} b
-            JOIN slots s ON b.slot_id = s.id
-            JOIN stations st ON s.station_id = st.id
+            LEFT JOIN slots s ON b.slot_id = s.id
+            LEFT JOIN stations st ON s.station_id = st.id
             JOIN users u ON b.advertiser_id = u.id
             LEFT JOIN users approver ON b.approved_by = approver.id
             ORDER BY b.created_at DESC
