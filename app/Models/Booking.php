@@ -76,10 +76,15 @@ class Booking extends BaseModel
                 s.start_time,
                 s.end_time,
                 s.price,
-                st.name as station_name
+                COALESCE(st.name, (SELECT name FROM stations LIMIT 1), 'Zaa Radio') as station_name,
+                (SELECT COUNT(*) FROM booking_sessions WHERE booking_id = b.id) as session_count,
+                CASE 
+                    WHEN b.ad_type IS NOT NULL THEN b.ad_type
+                    ELSE 'traditional'
+                END as booking_type
             FROM {$this->table} b
-            JOIN slots s ON b.slot_id = s.id
-            JOIN stations st ON s.station_id = st.id
+            LEFT JOIN slots s ON b.slot_id = s.id
+            LEFT JOIN stations st ON s.station_id = st.id
             WHERE b.advertiser_id = ?
             ORDER BY b.created_at DESC
         ";
@@ -184,11 +189,16 @@ class Booking extends BaseModel
                 s.start_time,
                 s.end_time,
                 s.price,
-                st.name as station_name
+                COALESCE(st.name, (SELECT name FROM stations LIMIT 1), 'Zaa Radio') as station_name,
+                (SELECT COUNT(*) FROM booking_sessions WHERE booking_id = b.id) as session_count,
+                CASE 
+                    WHEN b.ad_type IS NOT NULL THEN b.ad_type
+                    ELSE 'traditional'
+                END as booking_type
             FROM {$this->table} b
             JOIN users u ON b.advertiser_id = u.id
-            JOIN slots s ON b.slot_id = s.id
-            JOIN stations st ON s.station_id = st.id
+            LEFT JOIN slots s ON b.slot_id = s.id
+            LEFT JOIN stations st ON s.station_id = st.id
             ORDER BY b.created_at DESC
             LIMIT ?
         ";
@@ -212,11 +222,16 @@ class Booking extends BaseModel
                 s.start_time,
                 s.end_time,
                 s.price,
-                st.name as station_name
+                COALESCE(st.name, (SELECT name FROM stations LIMIT 1), 'Zaa Radio') as station_name,
+                (SELECT COUNT(*) FROM booking_sessions WHERE booking_id = b.id) as session_count,
+                CASE 
+                    WHEN b.ad_type IS NOT NULL THEN b.ad_type
+                    ELSE 'traditional'
+                END as booking_type
             FROM {$this->table} b
             JOIN users u ON b.advertiser_id = u.id
-            JOIN slots s ON b.slot_id = s.id
-            JOIN stations st ON s.station_id = st.id
+            LEFT JOIN slots s ON b.slot_id = s.id
+            LEFT JOIN stations st ON s.station_id = st.id
             WHERE b.status = ?
             ORDER BY b.created_at DESC
             LIMIT ?
@@ -237,10 +252,15 @@ class Booking extends BaseModel
                 s.start_time,
                 s.end_time,
                 s.price,
-                st.name as station_name
+                COALESCE(st.name, (SELECT name FROM stations LIMIT 1), 'Zaa Radio') as station_name,
+                (SELECT COUNT(*) FROM booking_sessions WHERE booking_id = b.id) as session_count,
+                CASE 
+                    WHEN b.ad_type IS NOT NULL THEN b.ad_type
+                    ELSE 'traditional'
+                END as booking_type
             FROM {$this->table} b
-            JOIN slots s ON b.slot_id = s.id
-            JOIN stations st ON s.station_id = st.id
+            LEFT JOIN slots s ON b.slot_id = s.id
+            LEFT JOIN stations st ON s.station_id = st.id
             WHERE b.advertiser_id = ?
             ORDER BY b.created_at DESC
             LIMIT ?
